@@ -1,13 +1,16 @@
 package com.sstek.jaoa.utils
 
-import org.apache.poi.xwpf.usermodel.*
+import org.apache.poi.ooxml.util.POIXMLUnits
 import org.apache.poi.util.Units
+import org.apache.poi.xwpf.usermodel.*
+import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTRPr
+import java.math.BigDecimal
+import java.math.RoundingMode
 import java.util.Base64
-import java.lang.StringBuilder
 
 fun xwpfToHtml(document: XWPFDocument): String {
     val html = StringBuilder()
-    html.append("<html><head><meta charset=\"UTF-8\"></head><body>")
+    html.append("<meta charset=\"utf-8\">")
 
     // Header
     document.headerList.forEach { header ->
@@ -142,19 +145,18 @@ fun paragraphToHtml(paragraph: XWPFParagraph): String {
         // TODO(font boyutunda problem java.awt kaynaklı)
         if (paragraph.runs.isNotEmpty()) {
 
-            /*
-            val firstRunFontSizeVal = paragraph.runs[0].fontSizeAsDouble
-            val firstRunFontSize = if (firstRunFontSizeVal != null) {
-                firstRunFontSizeVal.toDouble()
-            } else {
-                12.0
-            }
-             */
-            val firstRunFontSize = 12.0
-
-            if (firstRunFontSize > 0.0) {
-                val px = (firstRunFontSize * 1.3333).toInt()
-                styleBuilder.append("font-size:${px}px;")
+            val ctrPr = paragraph.runs[0].ctr.rPr
+            if (ctrPr != null && ctrPr.sizeOfSzArray() > 0) {
+                val fontSize = BigDecimal.valueOf(
+                    Units.toPoints(
+                        POIXMLUnits.parseLength(
+                            ctrPr.getSzArray(0).xgetVal()
+                        )
+                    )
+                ).divide(
+                    BigDecimal.valueOf(2), 0, RoundingMode.HALF_UP
+                )
+                styleBuilder.append("font-size:${fontSize}px;")
             }
             val firstRunFontFamily = paragraph.runs[0].fontFamily
             if (!firstRunFontFamily.isNullOrBlank()) {
@@ -187,15 +189,37 @@ fun runToHtml(run: XWPFRun): String {
     if (run.isItalic) styles.add("font-style:italic;")
     if (run.underline != UnderlinePatterns.NONE) styles.add("text-decoration:underline;")
 
+    val highlight = run.textHighlightColor.toString()
+    if (!highlight.isNullOrBlank() && highlight.lowercase() != "none") {
+        // POI textHighlightColor genellikle isim olarak döner, örn: "yellow"
+        // CSS için aynı isimleri kullanabiliriz
+        styles.add("background-color:$highlight;")
+    }
+
     val color = run.color
     if (!color.isNullOrBlank()) styles.add("color:#${color};")
 
     val fontFamily = run.fontFamily
     if (!fontFamily.isNullOrBlank()) styles.add("font-family:'${fontFamily}';")
 
-    // TODO(java.awt bağımlılığını kaldırmak için bunu yaptık ama gerçek boyutu alamadığı durumlar
-    // da da alabilmek lazım)
 
+    //run.fontSize
+    val ctrPr = run.ctr.rPr
+    if (ctrPr != null && ctrPr.sizeOfSzArray() > 0) {
+        val fontSize = BigDecimal.valueOf(
+            Units.toPoints(
+                POIXMLUnits.parseLength(
+                    ctrPr.getSzArray(0).xgetVal()
+                )
+            )
+        ).divide(
+            BigDecimal.valueOf(2), 0, RoundingMode.HALF_UP
+        )
+        styles.add("font-size:${fontSize}px;")
+    }
+
+    /*
+    // TODO(java.awt bağımlılığını kaldırmak için bunu yaptık ama gerçek boyutu alamadığı durumlar
     val fontSize = try {
         //val px = (run.fontSize * 1.3333).toInt()
         val px = (12 * 1.3333).toInt()
@@ -203,6 +227,7 @@ fun runToHtml(run: XWPFRun): String {
     } catch (e: Exception) {
         12
     }
+     */
 
     if (styles.isNotEmpty() || text.isNotBlank()) {
         if (styles.isEmpty()) {

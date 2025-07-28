@@ -1,12 +1,18 @@
+import android.content.Context
 import android.net.Uri
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Camera
+import androidx.compose.material.icons.filled.FontDownload
 import androidx.compose.material.icons.filled.FormatAlignCenter
 import androidx.compose.material.icons.filled.FormatAlignJustify
 import androidx.compose.material.icons.filled.FormatAlignLeft
@@ -27,21 +33,112 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.sstek.jaoa.ColorPicker
+import com.sstek.jaoa.FontPicker
 import jp.wasabeef.richeditor.RichEditor
+import java.io.ByteArrayOutputStream
+import java.io.InputStream
+import java.util.Base64
+
+fun Uri.toBase64(context: Context): String? {
+    return try {
+        val inputStream: InputStream? = context.contentResolver.openInputStream(this)
+        val outputStream = ByteArrayOutputStream()
+        val buffer = ByteArray(1024)
+        var len: Int
+
+        while (inputStream?.read(buffer).also { len = it ?: -1 } != -1) {
+            outputStream.write(buffer, 0, len)
+        }
+
+        val bytes = outputStream.toByteArray()
+        Base64.getEncoder().encodeToString(bytes)
+    } catch (e: Exception) {
+        e.printStackTrace()
+        null
+    }
+}
 
 @Composable
 fun EditorToolbar(editorRef: RichEditor?) {
     val scrollState = rememberScrollState()
+    val showTextColorPicker = remember { mutableStateOf(false) }
+    val showBackgroundColorPicker = remember { mutableStateOf(false) }
+    val showFontPicker = remember { mutableStateOf(false) }
+
+    val context = LocalContext.current
 
 
     val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         uri?.let {
-            editorRef?.insertImage(uri.toString(), "")
+            editorRef?.insertImage(uri.toString(), "resim")
+        }
+    }
+
+
+
+    val colors = listOf(
+        0xFF000000.toInt(), // Siyah
+        0xFFFF0000.toInt(), // Kırmızı
+        0xFF00FF00.toInt(), // Yeşil
+        0xFF0000FF.toInt(), // Mavi
+        0xFFFFFF00.toInt(), // Sarı
+        0xFFFFA500.toInt(), // Turuncu
+        0xFF800080.toInt(), // Mor
+        0xFF808080.toInt(), // Gri
+        0xFFFFFFFF.toInt()  // Beyaz
+    )
+
+    val fonts = listOf("Arial", "Calibri", "Times New Roman", "Courier New", "Georgia", "Verdana")
+    val fontSizes = (8..36 step 2).toList()
+
+    var selectedFont by remember { mutableStateOf(fonts.first()) }
+    var selectedFontSize by remember { mutableStateOf(16) }
+
+    if (showFontPicker.value) {
+        FontPicker(
+            fonts = fonts,
+            fontSizes = fontSizes,
+            selectedFont = selectedFont
+            ,
+            selectedFontSize = selectedFontSize,
+            onFontSelected = {
+                selectedFont = it
+                //editorRef
+            },
+            onFontSizeSelected = {
+                selectedFontSize = it
+                Log.d("EditorToolbar", "$it")
+                editorRef?.setFontSize(it)
+            },
+            onDismiss = { showFontPicker.value = false }
+        )
+    }
+
+
+    if (showTextColorPicker.value) {
+        ColorPicker(colors) { color ->
+            editorRef?.setTextColor(color)
+            showTextColorPicker.value = false
+        }
+    }
+
+    if (showBackgroundColorPicker.value) {
+        ColorPicker(colors) { color ->
+            editorRef?.setTextBackgroundColor(color)
+            //editorRef?.("javascript:RE.setTextBackgroundColor('$color')")
+
+            showBackgroundColorPicker.value = false
         }
     }
 
@@ -67,10 +164,19 @@ fun EditorToolbar(editorRef: RichEditor?) {
         IconButton(onClick = { editorRef?.setUnderline() }) {
             Icon(Icons.Filled.FormatUnderlined, contentDescription = "Altı Çizili")
         }
-        IconButton(onClick = { editorRef?.setTextBackgroundColor(0xFFFF00) }) {
+        IconButton(onClick = { showFontPicker.value = !showFontPicker.value }) {
+            Icon(Icons.Filled.FontDownload, contentDescription = "Yazı tipi ve boyutu")
+        }
+        IconButton(onClick = {
+            showBackgroundColorPicker.value = !showBackgroundColorPicker.value
+            showTextColorPicker.value = false
+        }) {
             Icon(Icons.Filled.FormatColorFill, contentDescription = "Arkaplan rengi")
         }
-        IconButton(onClick = { editorRef?.setTextColor(0xFF0000) }) {
+        IconButton(onClick = {
+            showTextColorPicker.value = !showTextColorPicker.value
+            showBackgroundColorPicker.value = false
+        }) {
             Icon(Icons.Filled.FormatColorText, contentDescription = "Yazı rengi")
         }
 
@@ -118,3 +224,4 @@ fun EditorToolbar(editorRef: RichEditor?) {
 
     }
 }
+

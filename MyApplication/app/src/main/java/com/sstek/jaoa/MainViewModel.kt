@@ -3,6 +3,7 @@ package com.sstek.jaoa
 import android.app.Application
 import android.content.Context
 import android.net.Uri
+import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.application
 import androidx.lifecycle.viewModelScope
@@ -52,8 +53,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _selectedFileUri.value?.let { uri ->
             viewModelScope.launch(Dispatchers.IO) {
                 try {
-                    val doc = convertHtmlToXwpf(html)
                     val context = getApplication<Application>().applicationContext
+                    val doc = convertHtmlToXwpf(context, html)  // context gönder!
                     context.contentResolver.openOutputStream(uri)?.use { out ->
                         doc.write(out)
                     }
@@ -61,26 +62,30 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 } catch (e: Exception) {
                     e.printStackTrace()
                     _toastMessage.emit("Dosya kaydedilirken hata oluştu: ${e.message}")
+                } finally {
+                    _isLoading.value = false
                 }
             }
         } ?: viewModelScope.launch {
             _toastMessage.emit("Lütfen önce dosya seçin.")
+            _isLoading.value = false
         }
-        _isLoading.value = false
     }
 
     fun saveAs(html: String, uri: Uri) {
         viewModelScope.launch(Dispatchers.IO) {
-            // Örneğin farklı dosya adı oluştur
-            val doc = convertHtmlToXwpf(html)
-            val context = getApplication<Application>().applicationContext
-
-            context.contentResolver.openOutputStream(uri)?.use { outputStream ->
-                doc.write(outputStream)
+            try {
+                val context = getApplication<Application>().applicationContext
+                val doc = convertHtmlToXwpf(context, html)  // context gönder!
+                context.contentResolver.openOutputStream(uri)?.use { outputStream ->
+                    doc.write(outputStream)
+                }
+                _selectedFileUri.value = uri
+                _toastMessage.emit("Farklı kaydedildi.")
+            } catch (e: Exception) {
+                e.printStackTrace()
+                _toastMessage.emit("Dosya kaydedilirken hata oluştu: ${e.message}")
             }
-
-            _selectedFileUri.value = uri
-            _toastMessage.emit("Farklı kaydedildi.")
         }
     }
 }

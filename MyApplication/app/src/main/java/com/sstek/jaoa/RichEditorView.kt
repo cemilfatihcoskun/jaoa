@@ -22,7 +22,7 @@ fun RichEditorView(
                 )
                 setPadding(16, 16, 16, 16)
                 setEditorFontSize(16)
-                setPlaceholder("Buraya yaz...")
+                //setPlaceholder("Buraya yaz...")
                 //setEditorHeight(5000) // ⚠️ bu çok kritik, WebView içerisine yükseklik vermeli
                 setFocusable(true)
                 setFocusableInTouchMode(true)
