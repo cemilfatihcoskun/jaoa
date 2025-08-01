@@ -1,9 +1,8 @@
-package com.sstek.jaoa
+package com.sstek.jaoa.editor
 
 import android.view.ViewGroup
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import jp.wasabeef.richeditor.RichEditor
 

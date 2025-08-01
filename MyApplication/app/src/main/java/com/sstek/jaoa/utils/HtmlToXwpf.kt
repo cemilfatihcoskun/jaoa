@@ -15,8 +15,8 @@ import java.io.FileInputStream
 import java.math.BigInteger
 import java.util.Base64
 
-val DEFAULT_WIDTH_UNITS_TO_EMU = 100.0
-val DEFAULT_HEIGHT_UNITS_TO_EMU = 100.0
+val DEFAULT_WIDTH_UNITS_TO_EMU = 200.0
+val DEFAULT_HEIGHT_UNITS_TO_EMU = 200.0
 
 fun convertHtmlToXwpf(context: Context, html: String): XWPFDocument {
     val document = XWPFDocument()
@@ -37,33 +37,33 @@ fun htmlToXwpf(
     document: XWPFDocument,
     inheritedStyle: StyleState = StyleState(),
     currentNumId: BigInteger? = null,
-    currentIlvl: Int = 0
+    currentIlvl: Int = 0,
+    paragraph: XWPFParagraph? = null
 ) {
     when (element) {
         is TextNode -> {
-            val text = element.text().trim()
-            if (text.isEmpty()) return
+            val text = element.text()
+            if (text.isBlank()) return
 
-            val paragraph = document.createParagraph()
-            paragraph.spacingBefore = 100
-            paragraph.spacingAfter = 100
-
-            if (currentNumId != null) {
-                paragraph.setNumID(currentNumId)
-                paragraph.setNumILvl(BigInteger.valueOf(currentIlvl.toLong()))
-            }
-
-            val run = paragraph.createRun().apply {
+            val run = (paragraph ?: document.createParagraph()).createRun().apply {
                 setText(text)
                 isBold = inheritedStyle.bold
                 isItalic = inheritedStyle.italic
-                fontSize = inheritedStyle.fontSize.coerceAtLeast(8) // min 8pt
+                fontSize = inheritedStyle.fontSize.coerceAtLeast(8)
                 fontFamily = inheritedStyle.fontFamilyName
                 if (inheritedStyle.underline) underline = UnderlinePatterns.SINGLE
                 setColor(inheritedStyle.color.removePrefix("#"))
                 inheritedStyle.backgroundColor?.let {
                     setTextHighlightColor(rgbIntToHighlightColorName(it.removePrefix("#")))
                 }
+            }
+
+            if (paragraph == null) {
+                /*
+                run.parent.spacingBefore = 0
+                run.parent.spacingAfter = 0
+                 */
+
             }
         }
 
@@ -78,82 +78,77 @@ fun htmlToXwpf(
             }
 
             "li" -> {
-                val paragraph = document.createParagraph()
-                paragraph.spacingBefore = 100
-                paragraph.spacingAfter = 100
-                if (currentNumId != null) {
-                    paragraph.setNumID(currentNumId)
-                    paragraph.setNumILvl(BigInteger.valueOf(currentIlvl.toLong()))
+                val para = document.createParagraph().apply {
+                    spacingBefore = 0
+                    spacingAfter = 0
+                    setNumID(currentNumId)
+                    setNumILvl(BigInteger.valueOf(currentIlvl.toLong()))
                 }
 
                 val newStyle = updateStyleForElement(element, inheritedStyle)
-
-                for (child in element.childNodes()) {
-                    htmlToXwpf(context, child, document, newStyle, currentNumId, currentIlvl)
+                val run = para.createRun().apply {
+                    isBold = newStyle.bold
+                    isItalic = newStyle.italic
+                    fontSize = newStyle.fontSize.coerceAtLeast(8)
+                    fontFamily = newStyle.fontFamilyName
+                    if (newStyle.underline) underline = UnderlinePatterns.SINGLE
+                    setColor(newStyle.color.removePrefix("#"))
+                    newStyle.backgroundColor?.let {
+                        setTextHighlightColor(rgbIntToHighlightColorName(it.removePrefix("#")))
+                    }
                 }
+
+                htmlInlineToSingleRun(context, element, run, newStyle)
             }
 
-            "p", "div", "h1", "h2", "h3", "h4", "h5", "h6", "span", "b", "strong", "i", "em", "u" -> {
-                val paragraph = document.createParagraph()
-                paragraph.spacingBefore = if (element.tagName().startsWith("h")) 300 else 100
-                paragraph.spacingAfter = if (element.tagName().startsWith("h")) 300 else 100
+
+
+            "p", "div", "span", "b", "i", "strong", "u", "em" -> {
+                val para = paragraph ?: document.createParagraph()
+                if (paragraph == null) {
+                    para.spacingBefore = 0
+                    para.spacingAfter = 0
+                }
 
                 val styleAttr = element.attr("style")
                 val textAlign = Regex("text-align\\s*:\\s*(left|right|center|justify)").find(styleAttr)?.groupValues?.get(1)
-                setParagraphAlignment(paragraph, textAlign)
+                setParagraphAlignment(para, textAlign)
 
-                if (element.tagName().startsWith("h")) {
-                    paragraph.style = "Heading${element.tagName().substring(1)}"
+                val newStyle = updateStyleForElement(element, inheritedStyle)
+                for (child in element.childNodes()) {
+                    htmlToXwpf(context, child, document, newStyle, currentNumId, currentIlvl, para)
                 }
+            }
+
+            "h1", "h2", "h3", "h4", "h5", "h6" -> {
+                val para = document.createParagraph()
+                para.spacingBefore = 0
+                para.spacingAfter = 0
+                para.style = "Heading${element.tagName().substring(1)}"
 
                 val newStyle = updateStyleForElement(element, inheritedStyle).apply {
-                    if (element.tagName().startsWith("h")) {
-                        fontSize = when (element.tagName()) {
-                            "h1" -> 32
-                            "h2" -> 28
-                            "h3" -> 24
-                            "h4" -> 20
-                            "h5" -> 16
-                            "h6" -> 14
-                            else -> 12
-                        }
-                        bold = true
+                    fontSize = when (element.tagName()) {
+                        "h1" -> 32; "h2" -> 28; "h3" -> 24
+                        "h4" -> 20; "h5" -> 16; "h6" -> 14
+                        else -> 12
                     }
+                    bold = true
                 }
 
                 for (child in element.childNodes()) {
-                    if (child is TextNode) {
-                        val text = child.text().trim()
-                        if (text.isNotEmpty()) {
-                            val run = paragraph.createRun().apply {
-                                setText(text)
-                                isBold = newStyle.bold
-                                isItalic = newStyle.italic
-                                fontSize = newStyle.fontSize.coerceAtLeast(8)
-                                fontFamily = newStyle.fontFamilyName
-                                if (newStyle.underline) underline = UnderlinePatterns.SINGLE
-                                setColor(newStyle.color.removePrefix("#"))
-                                newStyle.backgroundColor?.let {
-                                    setTextHighlightColor(rgbIntToHighlightColorName(it.removePrefix("#")))
-                                }
-                            }
-                        }
-                    } else {
-                        htmlToXwpf(context, child, document, newStyle, currentNumId, currentIlvl)
-                    }
+                    htmlToXwpf(context, child, document, newStyle, currentNumId, currentIlvl, para)
                 }
             }
 
             "img" -> {
                 val src = element.attr("src")
-                val paragraph = document.createParagraph()
+                val para = document.createParagraph()
 
                 try {
                     val inputStream = when {
-                        src.startsWith("data:image") && src.contains("base64,") -> {
+                        src.startsWith("data:image") -> {
                             val base64Data = src.substringAfter("base64,")
-                            val imageBytes = Base64.getDecoder().decode(base64Data)
-                            ByteArrayInputStream(imageBytes)
+                            ByteArrayInputStream(Base64.getDecoder().decode(base64Data))
                         }
 
                         src.startsWith("content://") -> {
@@ -162,40 +157,28 @@ fun htmlToXwpf(
 
                         else -> {
                             val file = File(src)
-                            if (file.exists()) {
-                                FileInputStream(file)
-                            } else {
-                                println("HtmlToXwpf → dosya bulunamadı: ${file.absolutePath}")
-                                null
-                            }
+                            if (file.exists()) FileInputStream(file) else null
                         }
                     }
 
                     if (inputStream != null) {
                         val pictureType = when {
-                            src.contains("png", ignoreCase = true) -> XWPFDocument.PICTURE_TYPE_PNG
-                            src.contains("jpeg", ignoreCase = true) || src.contains("jpg", ignoreCase = true) -> XWPFDocument.PICTURE_TYPE_JPEG
-                            src.contains("gif", ignoreCase = true) -> XWPFDocument.PICTURE_TYPE_GIF
+                            src.contains("png", true) -> XWPFDocument.PICTURE_TYPE_PNG
+                            src.contains("jpeg", true) || src.contains("jpg", true) -> XWPFDocument.PICTURE_TYPE_JPEG
+                            src.contains("gif", true) -> XWPFDocument.PICTURE_TYPE_GIF
                             else -> XWPFDocument.PICTURE_TYPE_PNG
                         }
 
-                        val run = paragraph.createRun()
-
                         inputStream.use {
-                            run.addPicture(
-                                it,
-                                pictureType,
-                                "image",
+                            para.createRun().addPicture(
+                                it, pictureType, "image",
                                 Units.toEMU(DEFAULT_WIDTH_UNITS_TO_EMU),
                                 Units.toEMU(DEFAULT_HEIGHT_UNITS_TO_EMU)
                             )
                         }
-
-                    } else {
-                        println("HtmlToXwpf → inputStream null, resim eklenemedi")
                     }
                 } catch (e: Exception) {
-                    println("HtmlToXwpf → HATA: Resim eklenirken hata oluştu → ${e.message}")
+                    println("HATA: Resim eklenirken: ${e.message}")
                 }
             }
 
@@ -205,47 +188,67 @@ fun htmlToXwpf(
                 val table = document.createTable(rows.size, maxCols)
 
                 for ((rowIndex, tr) in rows.withIndex()) {
-                    val ths = tr.getElementsByTag("th")
-                    for ((cellIndex, th) in ths.withIndex()) {
+                    val cells = tr.select("th, td")
+                    for ((cellIndex, cellElement) in cells.withIndex()) {
                         val cell = table.getRow(rowIndex).getCell(cellIndex)
-                        val newStyle = updateStyleForElement(th, inheritedStyle).apply { bold = true }
-                        if (cell.paragraphs.size > 0) cell.removeParagraph(0)
-                        val paragraph = cell.addParagraph()
-                        for (child in th.childNodes()) {
-                            htmlToXwpf(context, child, document, newStyle)
+                        cell.removeParagraph(0)
+                        val para = cell.addParagraph()
+                        val style = updateStyleForElement(cellElement, inheritedStyle).apply {
+                            if (cellElement.tagName() == "th") bold = true
                         }
-                    }
 
-                    val tds = tr.getElementsByTag("td")
-                    for ((cellIndex, td) in tds.withIndex()) {
-                        val cell = table.getRow(rowIndex).getCell(cellIndex)
-                        val newStyle = updateStyleForElement(td, inheritedStyle)
-                        if (cell.paragraphs.size > 0) cell.removeParagraph(0)
-                        val paragraph = cell.addParagraph()
-                        for (child in td.childNodes()) {
-                            htmlToXwpf(context, child, document, newStyle)
+                        for (child in cellElement.childNodes()) {
+                            htmlToXwpf(context, child, document, style, null, 0, para)
                         }
                     }
                 }
             }
 
             else -> {
-                val paragraph = document.createParagraph()
-                paragraph.spacingBefore = 100
-                paragraph.spacingAfter = 100
-
-                val styleAttr = element.attr("style")
-                val textAlign = Regex("text-align\\s*:\\s*(left|right|center|justify)").find(styleAttr)?.groupValues?.get(1)
-                setParagraphAlignment(paragraph, textAlign)
-
+                val para = paragraph ?: document.createParagraph()
                 val newStyle = updateStyleForElement(element, inheritedStyle)
+
                 for (child in element.childNodes()) {
-                    htmlToXwpf(context, child, document, newStyle, currentNumId, currentIlvl)
+                    htmlToXwpf(context, child, document, newStyle, currentNumId, currentIlvl, para)
                 }
             }
         }
     }
 }
+
+fun htmlInlineToSingleRun(
+    context: Context,
+    element: Element,
+    run: XWPFRun,
+    inheritedStyle: StyleState
+) {
+    for (child in element.childNodes()) {
+        when (child) {
+            is TextNode -> {
+                run.setText(child.text(), run.textPosition)
+            }
+
+            is Element -> {
+                val newStyle = updateStyleForElement(child, inheritedStyle)
+
+                // Eski stil üzerinden değiştir
+                run.isBold = newStyle.bold
+                run.isItalic = newStyle.italic
+                run.fontSize = newStyle.fontSize
+                run.fontFamily = newStyle.fontFamilyName
+                if (newStyle.underline) run.underline = UnderlinePatterns.SINGLE
+                run.setColor(newStyle.color.removePrefix("#"))
+                newStyle.backgroundColor?.let {
+                    run.setTextHighlightColor(rgbIntToHighlightColorName(it.removePrefix("#")))
+                }
+
+                htmlInlineToSingleRun(context, child, run, newStyle)
+            }
+        }
+    }
+}
+
+
 
 fun createDecimalNumbering(document: XWPFDocument): BigInteger {
     if (document.numbering == null) {
@@ -258,6 +261,7 @@ fun createDecimalNumbering(document: XWPFDocument): BigInteger {
 
     val lvl = ctAbstractNum.addNewLvl()
     lvl.ilvl = BigInteger.ZERO
+    lvl.addNewStart().setVal(BigInteger.ONE)
 
     val numFmt = lvl.addNewNumFmt()
     numFmt.setVal(STNumberFormat.DECIMAL)

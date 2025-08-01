@@ -60,6 +60,7 @@ dependencies {
     kaptAndroidTest("com.google.dagger:hilt-compiler:2.57")
     testImplementation("com.google.dagger:hilt-android-testing:2.57")
     kaptTest("com.google.dagger:hilt-compiler:2.57")
+    implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
 
 
     // Jetpack Compose

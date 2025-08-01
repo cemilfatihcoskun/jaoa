@@ -1,4 +1,4 @@
-package com.sstek.jaoa
+package com.sstek.jaoa.editor
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*

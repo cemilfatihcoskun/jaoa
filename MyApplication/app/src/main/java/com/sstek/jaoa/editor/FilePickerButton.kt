@@ -1,10 +1,14 @@
-package com.sstek.jaoa
+package com.sstek.jaoa.editor
 
 import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.FileOpen
 import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
@@ -22,7 +26,7 @@ fun FilePickerButton(onFilePicked: (Uri) -> Unit) {
             onFilePicked(it)
         }
     }
-    Button(onClick = { launcher.launch(arrayOf("application/vnd.openxmlformats-officedocument.wordprocessingml.document")) }) {
-        Text("Aç")
+    IconButton(onClick = { launcher.launch(arrayOf("application/vnd.openxmlformats-officedocument.wordprocessingml.document")) }) {
+        Icon(Icons.Filled.FileOpen, "Aç")
     }
 }

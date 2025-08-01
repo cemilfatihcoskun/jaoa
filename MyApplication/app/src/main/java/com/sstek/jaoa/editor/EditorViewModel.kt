@@ -1,14 +1,11 @@
-package com.sstek.jaoa
+package com.sstek.jaoa.editor
 
 import android.app.Application
-import android.content.Context
 import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.application
 import androidx.lifecycle.viewModelScope
 import com.sstek.jaoa.utils.convertHtmlToXwpf
-import com.sstek.jaoa.utils.htmlToXwpf
 import com.sstek.jaoa.utils.xwpfToHtml
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -18,9 +15,8 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import org.apache.poi.xwpf.usermodel.XWPFDocument
 import java.io.File
-import java.io.FileOutputStream
 
-class MainViewModel(application: Application) : AndroidViewModel(application) {
+class EditorViewModel(application: Application) : AndroidViewModel(application) {
     private val _selectedFileUri = MutableStateFlow<Uri?>(null)
     val selectedFileUri: StateFlow<Uri?> = _selectedFileUri
 
@@ -37,16 +33,43 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val isLoading: StateFlow<Boolean> = _isLoading
 
 
-    public fun loadAndConvert(uri: Uri) {
+    fun loadAndConvert(uri: Uri) {
+        _isLoading.value = true
         viewModelScope.launch(Dispatchers.IO) {
             val context = getApplication<Application>().applicationContext
-            val inputStream = context.contentResolver.openInputStream(uri)
-            val document = inputStream?.use { XWPFDocument(it) }
+            val inputStream = if (uri.scheme == "content") {
+                context.contentResolver.openInputStream(uri)
+            } else if (uri.scheme == "file" || uri.scheme == null) {
+                Log.d("EditorViewModel", "${uri.path}")
+                try {
+                    val file = File(uri.path ?: "")
+                    file.inputStream()
+                } catch (e: Exception) {
+                    Log.d("EditorViewModel", "${e.message}")
+                    _isLoading.value = false
+                    return@launch
+                }
+            } else {
+                null
+            }
+
+            val document = inputStream?.use {
+                try {
+                    XWPFDocument(it)
+                } catch (e: Exception) {
+                    Log.d("EditorViewModel", "${e.message}")
+                    _isLoading.value = false
+                    return@launch
+                }
+            }
             val html = document?.let { xwpfToHtml(it) }
             _htmlContent.value = html
             _selectedFileUri.value = uri
+
+            _isLoading.value = false
         }
     }
+
 
     fun saveHtmlAsDocx(html: String) {
         _isLoading.value = true
@@ -88,4 +111,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
     }
+
+    fun clearSelectedFile() {
+        _selectedFileUri.value = null
+        _htmlContent.value = null
+        _docxDocument.value = null
+        _isLoading.value = false
+    }
+
 }
