@@ -10,11 +10,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.navigation.compose.rememberNavController
 import com.sstek.jaoa.ApplicationNavigationHost
-import com.sstek.jaoa.editor.EditorScreen
 import dagger.hilt.android.AndroidEntryPoint
 
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import com.sstek.jaoa.editor.QuillEditorScreen
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -33,7 +33,7 @@ class MainActivity : ComponentActivity() {
                     }
                 )
             } else {
-                EditorScreen(
+                QuillEditorScreen(
                     filePath = currentFileUri!!,
                     onBack = { currentFileUri = null }
                 )

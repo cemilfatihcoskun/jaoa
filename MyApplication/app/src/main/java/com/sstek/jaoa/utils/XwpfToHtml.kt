@@ -5,8 +5,42 @@ import org.apache.poi.util.Units
 import org.apache.poi.xwpf.usermodel.*
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTRPr
 import java.math.BigDecimal
+import java.math.BigInteger
 import java.math.RoundingMode
 import java.util.Base64
+
+// pt -> px map tablosu
+val ptToPxMap = mapOf(
+    8 to 11,
+    9 to 12,
+    10 to 13,
+    11 to 15,
+    12 to 16,
+    14 to 19,
+    16 to 22,
+    18 to 24,
+    20 to 26,
+    22 to 29,
+    24 to 32,
+    26 to 35,
+    28 to 37,
+    36 to 48,
+    48 to 64,
+    72 to 96
+)
+
+// px → en yakın pt karşılığı bulan fonksiyon
+fun pxToClosestPt(px: Int): Int {
+    return ptToPxMap.minByOrNull { kotlin.math.abs(it.value - px) }?.key ?: 12
+}
+
+// fontFamily → ql-font-jaoa_... formatına dönüştüren fonksiyon
+fun toJaoaFontClass(fontFamily: String?): String? {
+    if (fontFamily.isNullOrBlank()) return null
+    return "ql-font-jaoa_" + fontFamily.trim()
+        .lowercase()
+        .replace(" ", "_")
+}
 
 fun xwpfToHtml(document: XWPFDocument): String {
     val html = StringBuilder()
@@ -93,31 +127,6 @@ fun xwpfToHtml(document: XWPFDocument): String {
 fun paragraphToHtml(paragraph: XWPFParagraph): String {
     val html = StringBuilder()
 
-    // Stil adını al ve normalize et (küçük harf + boşlukları kaldır + türkçe karakterleri dönüştür)
-    val styleIdRaw = paragraph.styleID ?: paragraph.style ?: ""
-    val styleId = styleIdRaw
-        .lowercase()
-        .replace("\\s".toRegex(), "")
-        .replace("ş", "s")
-        .replace("ı", "i")
-        .replace("ğ", "g")
-        .replace("ü", "u")
-        .replace("ö", "o")
-        .replace("ç", "c")
-        .replace("é", "e")
-
-    val headingLevel = when {
-        styleId.contains("heading1") || styleId == "balk1" || styleId == "baslik1" -> 1
-        styleId.contains("heading2") || styleId == "balk2" || styleId == "baslik2" -> 2
-        styleId.contains("heading3") || styleId == "balk3" || styleId == "baslik3" -> 3
-        styleId.contains("heading4") || styleId == "balk4" ||  styleId == "baslik4" -> 4
-        styleId.contains("heading5") || styleId == "balk5" ||  styleId == "baslik5" -> 5
-        styleId.contains("heading6") || styleId == "balk6" ||  styleId == "baslik6" -> 6
-        else -> null
-    }
-
-    val tag = if (headingLevel != null) "h$headingLevel" else "p"
-
     val alignment = when (paragraph.alignment) {
         ParagraphAlignment.LEFT -> "left"
         ParagraphAlignment.CENTER -> "center"
@@ -126,117 +135,64 @@ fun paragraphToHtml(paragraph: XWPFParagraph): String {
         else -> "left"
     }
 
-    val styleBuilder = StringBuilder()
-    styleBuilder.append("text-align:$alignment;")
-
-    if (headingLevel != null) {
-        val headingFontSizes = mapOf(
-            1 to 32,
-            2 to 26,
-            3 to 20,
-            4 to 16,
-            5 to 13,
-            6 to 11
-        )
-        styleBuilder.append("font-weight:bold;")
-        styleBuilder.append("font-size:${headingFontSizes[headingLevel]}px;")
-        styleBuilder.append("font-family: 'Calibri', sans-serif;")
-    } else {
-        // TODO(font boyutunda problem java.awt kaynaklı)
-        if (paragraph.runs.isNotEmpty()) {
-
-            val ctrPr = paragraph.runs[0].ctr.rPr
-            if (ctrPr != null && ctrPr.sizeOfSzArray() > 0) {
-                val fontSize = BigDecimal.valueOf(
-                    Units.toPoints(
-                        POIXMLUnits.parseLength(
-                            ctrPr.getSzArray(0).xgetVal()
-                        )
-                    )
-                ).divide(
-                    BigDecimal.valueOf(2), 0, RoundingMode.HALF_UP
-                )
-                styleBuilder.append("font-size:${fontSize}px;")
-            }
-            val firstRunFontFamily = paragraph.runs[0].fontFamily
-            if (!firstRunFontFamily.isNullOrBlank()) {
-                styleBuilder.append("font-family:'$firstRunFontFamily';")
-            }
+    val lineSpacing = try {
+        paragraph.spacingBetween.takeIf { it > 0 } ?: run {
+            val lineVal = paragraph.ctp.pPr?.spacing?.line
+            if (lineVal != null) (lineVal as BigInteger).toDouble() / 240 else null
         }
+    } catch (e: Exception) {
+        println("xwpftohtml, ${e.message}")
     }
 
-    html.append("<$tag style=\"$styleBuilder\">")
+    val styleParts = mutableListOf("text-align:$alignment;")
+    if (lineSpacing != null) styleParts.add("line-height:${lineSpacing};")
 
+    val styleAttr = styleParts.joinToString(" ")
+
+    val tag = "p" // heading kontrolü varsa ekle
+
+    html.append("<$tag style=\"$styleAttr\">")
     for (run in paragraph.runs) {
         html.append(runToHtml(run))
     }
-
     html.append("</$tag>")
+
     return html.toString()
 }
-
-
-
 
 
 fun runToHtml(run: XWPFRun): String {
     val html = StringBuilder()
     val text = run.text() ?: ""
 
-    val styles = mutableListOf<String>()
+    val classes = mutableListOf<String>()
+    val fontClass = toJaoaFontClass(run.fontFamily)
+    if (fontClass != null) classes.add(fontClass)
 
+    val fontSizePt = try {
+        (run.ctr.rPr.szArray?.firstOrNull()?.`val` as? BigInteger)?.toInt()?.div(2)
+    } catch (e: Exception) {
+        null
+    } ?: 12
+    classes.add("ql-size-${fontSizePt}pt")
+
+    val styles = mutableListOf<String>()
     if (run.isBold) styles.add("font-weight:bold;")
     if (run.isItalic) styles.add("font-style:italic;")
     if (run.underline != UnderlinePatterns.NONE) styles.add("text-decoration:underline;")
-
     val highlight = run.textHighlightColor.toString()
-    if (!highlight.isNullOrBlank() && highlight.lowercase() != "none") {
-        // POI textHighlightColor genellikle isim olarak döner, örn: "yellow"
-        // CSS için aynı isimleri kullanabiliriz
-        styles.add("background-color:$highlight;")
-    }
-
+    if (!highlight.isNullOrBlank() && highlight.lowercase() != "none") styles.add("background-color:$highlight;")
     val color = run.color
-    if (!color.isNullOrBlank()) styles.add("color:#${color};")
+    if (!color.isNullOrBlank()) styles.add("color:#$color;")
 
-    val fontFamily = run.fontFamily
-    if (!fontFamily.isNullOrBlank()) styles.add("font-family:'${fontFamily}';")
+    val styleAttr = styles.joinToString("")
 
-
-    //run.fontSize
-    val ctrPr = run.ctr.rPr
-    if (ctrPr != null && ctrPr.sizeOfSzArray() > 0) {
-        val fontSize = BigDecimal.valueOf(
-            Units.toPoints(
-                POIXMLUnits.parseLength(
-                    ctrPr.getSzArray(0).xgetVal()
-                )
-            )
-        ).divide(
-            BigDecimal.valueOf(2), 0, RoundingMode.HALF_UP
-        )
-        styles.add("font-size:${fontSize}px;")
-    }
-
-    /*
-    // TODO(java.awt bağımlılığını kaldırmak için bunu yaptık ama gerçek boyutu alamadığı durumlar
-    val fontSize = try {
-        //val px = (run.fontSize * 1.3333).toInt()
-        val px = (12 * 1.3333).toInt()
-        styles.add("font-size:${px}px;")
-    } catch (e: Exception) {
-        12
-    }
-     */
-
-    if (styles.isNotEmpty() || text.isNotBlank()) {
-        if (styles.isEmpty()) {
-            html.append(escapeHtml(text))
-        } else {
-            html.append("<span style=\"${styles.joinToString("")}\">")
-            html.append(escapeHtml(text))
-            html.append("</span>")
-        }
+    if (classes.isNotEmpty() || styleAttr.isNotBlank()) {
+        html.append("<span class=\"${classes.joinToString(" ")}\" style=\"$styleAttr\">")
+        html.append(escapeHtml(text))
+        html.append("</span>")
+    } else {
+        html.append(escapeHtml(text))
     }
 
     // Resimler varsa
@@ -248,6 +204,8 @@ fun runToHtml(run: XWPFRun): String {
 
     return html.toString()
 }
+
+
 
 fun pictureToHtml(picture: XWPFPicture): String {
     val pictureData = picture.pictureData ?: return ""

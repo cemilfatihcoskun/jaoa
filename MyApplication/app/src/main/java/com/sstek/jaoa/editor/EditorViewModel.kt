@@ -63,6 +63,7 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
                 }
             }
             val html = document?.let { xwpfToHtml(it) }
+            Log.d("EditorViewModel", "$html")
             _htmlContent.value = html
             _selectedFileUri.value = uri
 
@@ -119,4 +120,7 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
         _isLoading.value = false
     }
 
+    fun updateHtmlContent(newHtml: String) {
+        _htmlContent.value = newHtml
+    }
 }

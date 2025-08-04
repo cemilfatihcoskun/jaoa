@@ -58,12 +58,18 @@ fun htmlToXwpf(
                 }
             }
 
-            if (paragraph == null) {
-                /*
-                run.parent.spacingBefore = 0
-                run.parent.spacingAfter = 0
-                 */
+            val para = paragraph ?: document.createParagraph()
 
+            if (paragraph == null) {
+                para.spacingBefore = 0
+                para.spacingAfter = 0
+
+                // Satır aralığını uygula
+                inheritedStyle.lineHeight?.let { lh ->
+                    val spacing = para.ctp.addNewPPr().addNewSpacing()
+                    spacing.line = BigInteger.valueOf((lh * 240).toLong()) // 1.0 = 240
+                    spacing.lineRule = org.openxmlformats.schemas.wordprocessingml.x2006.main.STLineSpacingRule.AUTO
+                }
             }
         }
 
@@ -347,8 +353,28 @@ fun updateStyleForElement(element: Element, inheritedStyle: StyleState): StyleSt
         styleAttr.extractFontFamily()?.let { newStyle.fontFamilyName = it }
     }
 
+    // Quill sınıflarından font-size ve font-family kontrolü
+    val classAttr = element.className()
+    val sizeMatch = Regex("""ql-size-(\d+)pt""").find(classAttr)
+    if (sizeMatch != null) {
+        val sizePt = sizeMatch.groupValues[1].toIntOrNull()
+        if (sizePt != null) newStyle.fontSize = sizePt
+    }
+
+    val fontMatch = Regex("""ql-font-([\w_]+)""").find(classAttr)
+    val fontNameFormatted = fontMatch?.groupValues?.get(1)
+        ?.removePrefix("jaoa_")  // "jaoa_" kısmını çıkar
+        ?.split('_')             // '_' ile parçala
+        ?.joinToString(" ") { it.replaceFirstChar { c -> c.uppercase() } } // Her kelimenin ilk harfini büyük yap
+        ?: "Calibri" // Bulamazsa default font
+    newStyle.fontFamilyName = fontNameFormatted
+
+    styleAttr.extractLineHeight()?.let { newStyle.lineHeight = it }
+
     return newStyle
 }
+
+
 
 data class StyleState(
     var bold: Boolean = false,
@@ -357,8 +383,14 @@ data class StyleState(
     var color: String = "#000000",
     var fontFamilyName: String = "Calibri",
     var fontSize: Int = 12,
-    var backgroundColor: String? = null
+    var backgroundColor: String? = null,
+    var lineHeight: Double = 1.0
 )
+
+fun String.extractLineHeight(): Double? =
+    Regex("line-height\\s*:\\s*([\\d.]+)").find(this)
+        ?.groupValues?.get(1)
+        ?.toDoubleOrNull()
 
 fun String.extractCssColor(): String? =
     Regex("""(?<!background-)color\s*:\s*([^;]+)""").find(this)?.groupValues?.get(1)?.trim()

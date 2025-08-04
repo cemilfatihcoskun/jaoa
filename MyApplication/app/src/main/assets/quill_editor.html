@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Quill Editor Full</title>
+
+  <!-- Quill snow tema CSS -->
+  <link href="quill.snow.css" rel="stylesheet" />
+
+  <style>
+    @font-face {
+      font-family: 'jaoa_calibri';
+      src: url('fonts/calibri.ttf') format('truetype');
+    }
+
+    @font-face {
+      font-family: 'jaoa_arial';
+      src: url('fonts/arial.ttf') format('truetype');
+    }
+
+    @font-face {
+      font-family: 'jaoa_times_new_roman';
+      src: url('fonts/times_new_roman.ttf') format('truetype');
+    }
+
+    body {
+      margin: 0;
+      font-family: jaoa_arial, sans-serif;
+      font-size: 16px;
+    }
+
+    #toolbar {
+      position: sticky;
+      top: 0;
+      background: #fff;
+      z-index: 100;
+      border-bottom: 1px solid #ccc;
+      padding: 8px;
+    }
+
+    #editor-container {
+      padding: 16px;
+      min-height: 100vh;
+      font-family: Arial, sans-serif;
+      font-size: 16px;
+    }
+    
+    .ql-lineheight {
+	  width: 60px;
+	}
+
+    /* Quill font sınıfları */
+    .ql-font-jaoa_calibri { font-family: jaoa_calibri, monospace; }
+    .ql-font-jaoa_arial { font-family: jaoa_arial, sans-serif; }
+    .ql-font-jaoa_times_new_roman { font-family: jaoa_times_new_roman, serif; }
+
+    /* Yazı boyutu sınıfları */
+    .ql-size-8pt { font-size: 11px; }
+    .ql-size-9pt { font-size: 12px; }
+    .ql-size-10pt { font-size: 13px; }
+    .ql-size-11pt { font-size: 15px; }
+    .ql-size-12pt { font-size: 16px; }
+    .ql-size-14pt { font-size: 19px; }
+    .ql-size-16pt { font-size: 22px; }
+    .ql-size-18pt { font-size: 24px; }
+    .ql-size-20pt { font-size: 26px; }
+    .ql-size-22pt { font-size: 29px; }
+    .ql-size-24pt { font-size: 32px; }
+    .ql-size-26pt { font-size: 35px; }
+    .ql-size-28pt { font-size: 37px; }
+    .ql-size-36pt { font-size: 48px; }
+    .ql-size-48pt { font-size: 64px; }
+    .ql-size-72pt { font-size: 96px; }
+  </style>
+</head>
+<body>
+
+  <!-- Toolbar -->
+  <div id="toolbar">
+    <span class="ql-formats">
+      <select class="ql-font">
+        <option value="jaoa_calibri" selected>Calibri</option>
+        <option value="jaoa_arial">Arial</option>
+        <option value="jaoa_times_new_roman">Times New Roman</option>
+      </select>
+      
+      <select class="ql-size">
+        <option value="8pt">8pt</option>
+        <option value="9pt">9pt</option>
+        <option value="10pt">10pt</option>
+        <option value="11pt">11pt</option>
+        <option value="12pt" selected>12pt</option>
+        <option value="14pt">14pt</option>
+        <option value="16pt">16pt</option>
+        <option value="18pt">18pt</option>
+        <option value="20pt">20pt</option>
+        <option value="22pt">22pt</option>
+        <option value="24pt">24pt</option>
+        <option value="26pt">26pt</option>
+        <option value="28pt">28pt</option>
+        <option value="36pt">36pt</option>
+        <option value="48pt">48pt</option>
+        <option value="72pt">72pt</option>
+      </select>
+      
+      
+    </span>
+    
+    <span class="ql-formats">
+      <select class="ql-lineheight">
+        <option selected value="1">1</option>
+        <option value="1.15">1.15</option>
+        <option value="1.5">1.5</option>
+        <option value="2">2</option>
+        <option value="2.5">2.5</option>
+        <option value="3">3</option>
+      </select>
+    </span>
+
+    <span class="ql-formats">
+      <button class="ql-bold"></button>
+      <button class="ql-italic"></button>
+      <button class="ql-underline"></button>
+      <button class="ql-strike"></button>
+    </span>
+
+    <span class="ql-formats">
+      <select class="ql-color"></select>
+      <select class="ql-background"></select>
+    </span>
+
+    <span class="ql-formats">
+      <button class="ql-blockquote"></button>
+      <button class="ql-code-block"></button>
+      <select class="ql-align"></select>
+    </span>
+
+    <span class="ql-formats">
+      <button class="ql-list" value="ordered"></button>
+      <button class="ql-list" value="bullet"></button>
+      <button class="ql-indent" value="-1"></button>
+      <button class="ql-indent" value="+1"></button>
+    </span>
+
+    <span class="ql-formats">
+      <button class="ql-link"></button>
+      <button class="ql-image"></button>
+      <button class="ql-video"></button>
+    </span>
+
+    <span class="ql-formats">
+      <button class="ql-clean"></button>
+    </span>
+  </div>
+
+  <!-- Editör Alanı -->
+  <div id="editor-container"></div>
+
+  <!-- Quill JS -->
+  <script src="quill.js"></script>
+
+  <script>
+    // Font seçeneklerini tanımla
+    var Font = Quill.import('formats/font');
+    Font.whitelist = ['jaoa_calibri', 'jaoa_arial', 'jaoa_times_new_roman'];
+    Quill.register(Font, true);
+
+    // Boyut seçeneklerini px olarak ayarla
+    var Size = Quill.import('formats/size');
+    Size.whitelist = ['8pt', '9pt', '10pt', '11pt', '12pt', '14pt', '16pt', '18pt', '20pt', '22pt', '24pt', '26pt', '28pt', '36pt', '48pt', '72pt'];
+    Quill.register(Size, true);
+
+    // Satır aralığı formatı (line-height)
+    const Parchment = Quill.import('parchment');
+	const LineHeightStyle = new Parchment.Attributor.Style('lineheight', 'line-height', {
+	  scope: Parchment.Scope.BLOCK,
+	  whitelist: ['1', '1.15', '1.5', '2', '2.5', '3']
+	});
+	Quill.register(LineHeightStyle, true);
+
+    // Editörü başlat
+    const quill = new Quill('#editor-container', {
+      theme: 'snow',
+      modules: {
+        toolbar: '#toolbar',
+        clipboard: {
+          matchVisual: false
+        }
+      },
+    });
+
+    // Android'den içerik alma
+    window.setHtmlContent = function(content) {
+      try {
+        quill.clipboard.dangerouslyPasteHTML(content);
+      } catch(e) {
+        console.error("setHtmlContent error", e);
+      }
+    };
+
+    // Android'e içerik gönderme
+    window.getHtmlContent = function() {
+      const html = quill.root.innerHTML;
+      if (window.AndroidInterface && window.AndroidInterface.receiveHtml) {
+        window.AndroidInterface.receiveHtml(html);
+      }
+      return html;
+    };
+
+    // WebView odak problemi için tıklayınca odakla
+    document.body.addEventListener('click', () => quill.focus());
+    
+
+  </script>
+
+</body>
+</html>
