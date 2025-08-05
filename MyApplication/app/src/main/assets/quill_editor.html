@@ -71,6 +71,10 @@
     .ql-size-36pt { font-size: 48px; }
     .ql-size-48pt { font-size: 64px; }
     .ql-size-72pt { font-size: 96px; }
+    
+    .ql-lineheight option {
+  color: black; /* Eğer görünmüyorsa beyaz kalıyor olabilir */
+}
   </style>
 </head>
 <body>
@@ -151,6 +155,8 @@
     <span class="ql-formats">
       <button class="ql-clean"></button>
     </span>
+    
+    
   </div>
 
   <!-- Editör Alanı -->
@@ -158,6 +164,7 @@
 
   <!-- Quill JS -->
   <script src="quill.js"></script>
+  <script src="quill_image_resize_modified.js"></script>
 
   <script>
     // Font seçeneklerini tanımla
@@ -177,17 +184,19 @@
 	  whitelist: ['1', '1.15', '1.5', '2', '2.5', '3']
 	});
 	Quill.register(LineHeightStyle, true);
+	
 
-    // Editörü başlat
-    const quill = new Quill('#editor-container', {
-      theme: 'snow',
-      modules: {
-        toolbar: '#toolbar',
-        clipboard: {
-          matchVisual: false
-        }
-      },
-    });
+  const quill = new Quill('#editor-container', {
+    theme: 'snow',
+    modules: {
+      toolbar: '#toolbar',
+      imageResize: {
+        keepRatio: false  // veya true yapabilirsin
+      }
+    },
+    
+  });
+
 
     // Android'den içerik alma
     window.setHtmlContent = function(content) {
@@ -210,6 +219,20 @@
     // WebView odak problemi için tıklayınca odakla
     document.body.addEventListener('click', () => quill.focus());
     
+    // Align değiştiğinde overlay güncelle
+    const imageResize = quill.getModule('imageResize');
+	quill.on('editor-change', function(eventName, ...args) {
+	  if (eventName === 'text-change' || eventName === 'selection-change') {
+		// Burada güncelleme tetikleyebilirsin.
+		// Örneğin seçili resim varsa ve overlay açıksa:
+		if (imageResize && imageResize.img) {
+		  imageResize.onUpdate();
+		}
+	  }
+	});
+	
+	
+
 
   </script>
 

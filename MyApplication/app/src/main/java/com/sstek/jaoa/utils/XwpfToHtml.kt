@@ -3,6 +3,8 @@ package com.sstek.jaoa.utils
 import org.apache.poi.ooxml.util.POIXMLUnits
 import org.apache.poi.util.Units
 import org.apache.poi.xwpf.usermodel.*
+import org.openxmlformats.schemas.drawingml.x2006.wordprocessingDrawing.CTAnchor
+import org.openxmlformats.schemas.drawingml.x2006.wordprocessingDrawing.CTInline
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTRPr
 import java.math.BigDecimal
 import java.math.BigInteger
@@ -145,7 +147,9 @@ fun paragraphToHtml(paragraph: XWPFParagraph): String {
     }
 
     val styleParts = mutableListOf("text-align:$alignment;")
-    if (lineSpacing != null) styleParts.add("line-height:${lineSpacing};")
+    if (lineSpacing != null && lineSpacing != 1.0) {
+        styleParts.add("line-height:${lineSpacing};")
+    }
 
     val styleAttr = styleParts.joinToString(" ")
 
@@ -207,6 +211,20 @@ fun runToHtml(run: XWPFRun): String {
 
 
 
+fun getPictureSizeInPx(picture: XWPFPicture): Pair<Int, Int> {
+    val ctExtent = picture.ctPicture.spPr?.xfrm?.ext ?: return Pair(0, 0)
+
+    val widthEmu = ctExtent.cx.toLong()
+    val heightEmu = ctExtent.cy.toLong()
+
+    val widthPx = emuToPx(widthEmu)
+    val heightPx = emuToPx(heightEmu)
+
+    return Pair(widthPx, heightPx)
+}
+
+
+
 fun pictureToHtml(picture: XWPFPicture): String {
     val pictureData = picture.pictureData ?: return ""
     val base64 = Base64.getEncoder().encodeToString(pictureData.data)
@@ -226,7 +244,18 @@ fun pictureToHtml(picture: XWPFPicture): String {
         else -> "image/png"
     }
 
-    return """<img src="data:$mimeType;base64,$base64" style="max-width:100%;height:auto;" />"""
+    val (widthPx, heightPx) = getPictureSizeInPx(picture)
+
+    // Eğer boyut alınamadıysa style kısmına max-width ve auto koyabiliriz
+    val style = if (widthPx > 0 && heightPx > 0) {
+        "width:${widthPx}px; height:${heightPx}px;"
+    } else {
+        "max-width:100%; height:auto;"
+    }
+
+    println("xwpftohtml, imgsize: $widthPx, $heightPx")
+
+    return """<img width="$widthPx" height="$heightPx" src="data:$mimeType;base64,$base64" />"""
 }
 
 fun tableToHtml(table: XWPFTable): String {

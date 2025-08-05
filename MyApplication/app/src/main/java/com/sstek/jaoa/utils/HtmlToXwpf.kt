@@ -66,10 +66,12 @@ fun htmlToXwpf(
 
                 // Satır aralığını uygula
                 inheritedStyle.lineHeight?.let { lh ->
-                    val spacing = para.ctp.addNewPPr().addNewSpacing()
-                    spacing.line = BigInteger.valueOf((lh * 240).toLong()) // 1.0 = 240
-                    spacing.lineRule = org.openxmlformats.schemas.wordprocessingml.x2006.main.STLineSpacingRule.AUTO
+                    val pPr = para.ctp.pPr ?: para.ctp.addNewPPr()
+                    val spacing = pPr.spacing ?: pPr.addNewSpacing()
+                    spacing.line = BigInteger.valueOf((lh * 240).toLong())
+                    spacing.lineRule = org.openxmlformats.schemas.wordprocessingml.x2006.main.STLineSpacingRule.EXACT
                 }
+
             }
         }
 
@@ -156,11 +158,9 @@ fun htmlToXwpf(
                             val base64Data = src.substringAfter("base64,")
                             ByteArrayInputStream(Base64.getDecoder().decode(base64Data))
                         }
-
                         src.startsWith("content://") -> {
                             context.contentResolver.openInputStream(Uri.parse(src))
                         }
-
                         else -> {
                             val file = File(src)
                             if (file.exists()) FileInputStream(file) else null
@@ -175,11 +175,24 @@ fun htmlToXwpf(
                             else -> XWPFDocument.PICTURE_TYPE_PNG
                         }
 
+                        // Stil ve attribute'dan boyutları al
+                        val style = element.attr("style")
+                        val widthPx = Regex("width\\s*:\\s*(\\d+)px").find(style)?.groupValues?.get(1)?.toIntOrNull()
+                        val heightPx = Regex("height\\s*:\\s*(\\d+)px").find(style)?.groupValues?.get(1)?.toIntOrNull()
+                        val widthAttr = element.attr("width").toIntOrNull()
+                        val heightAttr = element.attr("height").toIntOrNull()
+
+                        val finalWidthPx = widthPx ?: widthAttr ?: DEFAULT_WIDTH_UNITS_TO_EMU.toInt()
+                        val finalHeightPx = heightPx ?: heightAttr ?: DEFAULT_HEIGHT_UNITS_TO_EMU.toInt()
+
+                        val widthEmu = pxToEmu(finalWidthPx.toInt())
+                        val heightEmu = pxToEmu(finalHeightPx.toInt())
+
                         inputStream.use {
                             para.createRun().addPicture(
                                 it, pictureType, "image",
-                                Units.toEMU(DEFAULT_WIDTH_UNITS_TO_EMU),
-                                Units.toEMU(DEFAULT_HEIGHT_UNITS_TO_EMU)
+                                widthEmu,
+                                heightEmu
                             )
                         }
                     }
@@ -187,6 +200,7 @@ fun htmlToXwpf(
                     println("HATA: Resim eklenirken: ${e.message}")
                 }
             }
+
 
             "table" -> {
                 val rows = element.getElementsByTag("tr")
