@@ -9,6 +9,7 @@
 * Sıralı ve sırasız liste eklenebiliyor.
 * Font ayarlama çözüldü. Şu an arial, calibri, times new roman 3 farklı font var. 8pt dan başlayarak
 72pt kadar düzenli bir sıra olmadan font boyutu ayarlanabiliyor.
+* Açılış ekranından docx dosyaları seçilebiliyor. Android 31 (12) ve 35 (15) te denendi.
 
 ### Yapılamayanlar
 * Tablo okuma sıkıntılı metinler tablonun dışına taşıyor.
