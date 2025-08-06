@@ -7,9 +7,9 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
-//import com.sstek.jaoa.editor.EditorScreen
 import com.sstek.jaoa.editor.QuillEditorScreen
 import com.sstek.jaoa.main.MainScreen
+import android.util.Log
 
 @Composable
 fun ApplicationNavigationHost(navController: NavHostController) {
@@ -20,29 +20,28 @@ fun ApplicationNavigationHost(navController: NavHostController) {
         composable("main") {
             MainScreen(
                 onOpenFile = { filePath ->
-                    navController.navigate("editor/${filePath}")
+                    Log.d("DocxFiles", "Navigating to editor from MainScreen: $filePath")
+                    navController.navigate("editor/${filePath.toString().replace("/", "%2F")}")
                 },
                 onCreateNew = {
-                    navController.navigate("editor/") // boş path → yeni dosya
+                    Log.d("DocxFiles", "Navigating to editor for new file")
+                    navController.navigate("editor/") // Boş path → yeni dosya
                 }
             )
         }
 
         composable(
-            route = "editor/{filePath}",
-            arguments = listOf(navArgument("filePath") {
-                type = NavType.StringType
-                nullable = true
-                defaultValue = ""
-            })
+            route = "editor/{fileUri}",
+            arguments = listOf(navArgument("fileUri") { type = NavType.StringType })
         ) { backStackEntry ->
-            val filePath = backStackEntry.arguments?.getString("filePath") ?: ""
+            val fileUriString = backStackEntry.arguments?.getString("fileUri")
+            val fileUri = fileUriString?.let { Uri.parse(Uri.decode(it)) }
+
             QuillEditorScreen(
-                filePath = Uri.parse(filePath),
-                onBack = { navController.popBackStack()}
+                filePath = fileUri,
+                onBack = { navController.popBackStack() }
             )
         }
+
     }
 }
-
-

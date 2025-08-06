@@ -34,6 +34,12 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
 
 
     fun loadAndConvert(uri: Uri) {
+        if (_isLoading.value) {
+            viewModelScope.launch {
+                _toastMessage.emit("Şu an bir işlem yapılıyor.")
+            }
+        }
+
         _isLoading.value = true
         viewModelScope.launch(Dispatchers.IO) {
             val context = getApplication<Application>().applicationContext
@@ -73,6 +79,12 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
 
 
     fun saveHtmlAsDocx(html: String) {
+        if (_isLoading.value) {
+            viewModelScope.launch {
+                _toastMessage.emit("Şu an bir işlem yapılıyor.")
+            }
+        }
+
         _isLoading.value = true
         _selectedFileUri.value?.let { uri ->
             viewModelScope.launch(Dispatchers.IO) {
@@ -97,6 +109,12 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun saveAs(html: String, uri: Uri) {
+        if (_isLoading.value) {
+            viewModelScope.launch {
+                _toastMessage.emit("Şu an bir işlem yapılıyor.")
+            }
+        }
+
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val context = getApplication<Application>().applicationContext

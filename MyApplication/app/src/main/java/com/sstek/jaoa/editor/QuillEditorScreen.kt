@@ -117,12 +117,18 @@ fun QuillEditorScreen(
             Spacer(modifier = Modifier.width(8.dp))
 
             IconButton(onClick = {
-                webView?.evaluateJavascript("window.getHtmlContent();") { html ->
-                    val jsonWrapped = "{ \"data\": $html }"
-                    val obj = JSONObject(jsonWrapped)
-                    val decodedHtml = obj.getString("data")
-                    viewModel.saveHtmlAsDocx(decodedHtml)
+
+                if (viewModel.selectedFileUri.value != null) {
+                    webView?.evaluateJavascript("window.getHtmlContent();") { html ->
+                        val jsonWrapped = "{ \"data\": $html }"
+                        val obj = JSONObject(jsonWrapped)
+                        val decodedHtml = obj.getString("data")
+                        viewModel.saveHtmlAsDocx(decodedHtml)
+                    }
+                } else {
+                    createDocumentLauncher.launch("Dosya.docx")
                 }
+
             }) {
                 Icon(Icons.Filled.Save, contentDescription = "Kaydet")
             }
