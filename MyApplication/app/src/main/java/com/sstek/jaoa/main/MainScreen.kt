@@ -46,7 +46,7 @@ fun MainScreen(
     val context = LocalContext.current
     var docxFiles by remember { mutableStateOf<List<Pair<String, Uri>>>(emptyList()) }
 
-    // MANAGE_EXTERNAL_STORAGE izni için launcher
+
     val manageStorageLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) {
