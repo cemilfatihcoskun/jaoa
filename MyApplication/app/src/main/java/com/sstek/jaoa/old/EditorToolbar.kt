@@ -39,8 +39,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import com.sstek.jaoa.editor.ColorPicker
-import com.sstek.jaoa.editor.FontPicker
+import com.sstek.jaoa.old.ColorPicker
+import com.sstek.jaoa.old.FontPicker
 import jp.wasabeef.richeditor.RichEditor
 import java.io.ByteArrayOutputStream
 import java.io.InputStream

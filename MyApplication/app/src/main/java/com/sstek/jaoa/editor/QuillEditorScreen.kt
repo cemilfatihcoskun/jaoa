@@ -10,8 +10,10 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Redo
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.SaveAs
+import androidx.compose.material.icons.filled.Undo
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -54,7 +56,12 @@ fun QuillEditorScreen(
         contract = androidx.activity.result.contract.ActivityResultContracts.CreateDocument("application/vnd.openxmlformats-officedocument.wordprocessingml.document")
     ) { uri: Uri? ->
         if (uri != null) {
-            viewModel.saveAs(htmlContent ?: "", uri)
+            webView?.evaluateJavascript("window.getHtmlContent();") { html ->
+                val jsonWrapped = "{ \"data\": $html }"
+                val obj = JSONObject(jsonWrapped)
+                val decodedHtml = obj.getString("data")
+                viewModel.saveAs(decodedHtml, uri)
+            }
         }
     }
 
@@ -117,6 +124,20 @@ fun QuillEditorScreen(
             Spacer(modifier = Modifier.width(8.dp))
 
             IconButton(onClick = {
+                webView?.evaluateJavascript("quill.history.undo();", null)
+            }) {
+                Icon(Icons.Default.Undo, contentDescription = "Geri Al")
+            }
+
+            IconButton(onClick = {
+                webView?.evaluateJavascript("quill.history.redo();", null)
+            }) {
+                Icon(Icons.Default.Redo, contentDescription = "İleri Al")
+            }
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            IconButton(onClick = {
 
                 if (viewModel.selectedFileUri.value != null) {
                     webView?.evaluateJavascript("window.getHtmlContent();") { html ->
@@ -134,7 +155,7 @@ fun QuillEditorScreen(
             }
 
             IconButton(onClick = {
-                createDocumentLauncher.launch("YeniDosya.docx")
+                createDocumentLauncher.launch("Dosya.docx")
             }) {
                 Icon(Icons.Filled.SaveAs, contentDescription = "Farklı Kaydet")
             }
@@ -183,7 +204,11 @@ fun QuillEditorScreen(
                     settings.allowContentAccess = true
 
                     webChromeClient = myWebChromeClient
-                    webViewClient = WebViewClient()
+                    webViewClient = QuillWebViewClient {
+                        val content = htmlContent ?: ""
+                        val escaped = content.replace("\"", "\\\"").replace("\n", "\\n")
+                        evaluateJavascript("window.setHtmlContent(\"$escaped\")", null)
+                    }
 
                     addJavascriptInterface(object {
                         @android.webkit.JavascriptInterface
@@ -192,6 +217,7 @@ fun QuillEditorScreen(
                         }
                     }, "AndroidInterface")
 
+                    //addJavascriptInterface(AndroidWebInterface(this, htmlContent ?: ""), "AndroidInterface")
                     loadUrl("file:///android_asset/quill_editor.html")
                     webView = this
                 }

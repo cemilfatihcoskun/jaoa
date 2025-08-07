@@ -60,6 +60,8 @@ fun MainScreen(
         }
     }
 
+
+
     // Dosya seçici için launcher
     val filePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
@@ -137,56 +139,37 @@ fun getAllDocxFiles(context: Context): List<Pair<String, Uri>> {
         getDocxFilesWithFileApi(context)
     } else {
         // Android 13+ (API 33+, örneğin Android 15) için MediaStore kullan
-        getDocxFilesWithMediaStore(context)
+        //getDocxFilesWithFileApi(context)
+        getDocxFilesWithFileApi(context)
     }
 }
 
 fun getDocxFilesWithMediaStore(context: Context): List<Pair<String, Uri>> {
-    val docxList = mutableListOf<Triple<String, Uri, String>>()
+    val docxList = mutableListOf<Pair<String, Uri>>()
     val uri = MediaStore.Files.getContentUri("external")
     val projection = arrayOf(
         MediaStore.Files.FileColumns._ID,
-        MediaStore.Files.FileColumns.DISPLAY_NAME,
-        MediaStore.Files.FileColumns.DATA
+        MediaStore.Files.FileColumns.DISPLAY_NAME
     )
-    val selection = "${MediaStore.Files.FileColumns.MIME_TYPE} = ? OR LOWER(${MediaStore.Files.FileColumns.DISPLAY_NAME}) LIKE ?"
-    val selectionArgs = arrayOf(
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        "%.docx"
-    )
+    val selection = "LOWER(${MediaStore.Files.FileColumns.DISPLAY_NAME}) LIKE ?"
+    val selectionArgs = arrayOf("%.docx")
     val sortOrder = "${MediaStore.Files.FileColumns.DATE_ADDED} DESC"
 
-    Log.d("DocxFiles", "Starting MediaStore query with uri: $uri, selection: $selection")
-    try {
-        context.contentResolver.query(uri, projection, selection, selectionArgs, sortOrder)?.use { cursor ->
-            Log.d("DocxFiles", "Total files found in MediaStore: ${cursor.count}")
-            val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns._ID)
-            val nameColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DISPLAY_NAME)
-            val dataColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DATA)
-            while (cursor.moveToNext()) {
-                val id = cursor.getLong(idColumn)
-                val name = cursor.getString(nameColumn)
-                val data = cursor.getString(dataColumn) ?: ""
-                val contentUri = Uri.withAppendedPath(uri, id.toString())
-                Log.d("DocxFiles", "Found file: $name, Path: $data, Uri: $contentUri")
-                docxList += Triple(name, contentUri, data)
-            }
-        } ?: Log.e("DocxFiles", "MediaStore query returned null cursor")
-    } catch (e: Exception) {
-        Log.e("DocxFiles", "MediaStore query failed: ${e.message}", e)
-        Toast.makeText(context, "Dosyalar yüklenirken hata oluştu: ${e.message}", Toast.LENGTH_LONG).show()
+    context.contentResolver.query(uri, projection, selection, selectionArgs, sortOrder)?.use { cursor ->
+        val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns._ID)
+        val nameColumn = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DISPLAY_NAME)
+
+        while (cursor.moveToNext()) {
+            val id = cursor.getLong(idColumn)
+            val name = cursor.getString(nameColumn)
+            val contentUri = Uri.withAppendedPath(uri, id.toString())
+            docxList += name to contentUri
+        }
     }
 
-    // Dosya yoluna göre tekrarları kaldır ve Pair formatına çevir
-    val result = docxList.distinctBy { it.third } // Dosya yoluna göre filtrele
-        .map { it.first to it.second } // Pair<String, Uri> formatına çevir
-
-    Log.d("DocxFiles", "Returning ${result.size} files from MediaStore")
-    if (result.isEmpty()) {
-        Toast.makeText(context, "Cihazda .docx dosyası bulunamadı.", Toast.LENGTH_SHORT).show()
-    }
-    return result
+    return docxList
 }
+
 
 fun getDocxFilesWithFileApi(context: Context): List<Pair<String, Uri>> {
     val docxList = mutableListOf<Triple<String, Uri, String>>()
@@ -196,18 +179,31 @@ fun getDocxFilesWithFileApi(context: Context): List<Pair<String, Uri>> {
         return emptyList()
     }
 
-    Log.d("DocxFiles", "Scanning storage with File API")
     try {
-        // Dahili depolama ve SD kart için tüm harici depolama dizinlerini tara
+        // Uygulama dizinleri
         context.getExternalFilesDirs(null).forEach { storageDir ->
-            val parentDir = storageDir.parentFile?.parentFile?.parentFile?.parentFile // Kök dizine ulaş
-            if (parentDir != null && parentDir.exists()) {
-                Log.d("DocxFiles", "Scanning storage: ${parentDir.absolutePath}")
-                parentDir.walkTopDown().forEach { file ->
+            if (storageDir != null && storageDir.exists()) {
+                Log.d("DocxFiles", "Scanning storage: ${storageDir.absolutePath}")
+                storageDir.walkTopDown().forEach { file ->
                     if (file.isFile && file.name.endsWith(".docx", ignoreCase = true)) {
-                        val uri = Uri.fromFile(file)
-                        Log.d("DocxFiles", "Found file: ${file.name}, Path: ${file.absolutePath}, Uri: $uri")
-                        docxList += Triple(file.name, uri, file.absolutePath)
+                        docxList += Triple(file.name, Uri.fromFile(file), file.absolutePath)
+                    }
+                }
+            }
+        }
+
+        // Yaygın dış dizinler
+        val extraDirs = listOf(
+            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS),
+            Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
+        )
+
+        extraDirs.forEach { dir ->
+            if (dir.exists()) {
+                Log.d("DocxFiles", "Scanning extra dir: ${dir.absolutePath}")
+                dir.walkTopDown().forEach { file ->
+                    if (file.isFile && file.name.endsWith(".docx", ignoreCase = true)) {
+                        docxList += Triple(file.name, Uri.fromFile(file), file.absolutePath)
                     }
                 }
             }
@@ -217,13 +213,7 @@ fun getDocxFilesWithFileApi(context: Context): List<Pair<String, Uri>> {
         Toast.makeText(context, "Dosyalar yüklenirken hata: ${e.message}", Toast.LENGTH_LONG).show()
     }
 
-    // Dosya yoluna göre tekrarları kaldır ve Pair formatına çevir
-    val result = docxList.distinctBy { it.third } // Dosya yoluna göre filtrele
-        .map { it.first to it.second } // Pair<String, Uri> formatına çevir
-
-    Log.d("DocxFiles", "Returning ${result.size} files from File API")
-    if (result.isEmpty()) {
-        Toast.makeText(context, "Cihazda .docx dosyası bulunamadı.", Toast.LENGTH_SHORT).show()
-    }
-    return result
+    // Yolu baz alarak tekrarı kaldır
+    return docxList.distinctBy { it.third }
+        .map { it.first to it.second }
 }

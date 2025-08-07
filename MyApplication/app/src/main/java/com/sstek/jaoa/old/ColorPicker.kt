@@ -1,4 +1,4 @@
-package com.sstek.jaoa.editor
+package com.sstek.jaoa.old
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable

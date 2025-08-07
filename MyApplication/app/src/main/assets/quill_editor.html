@@ -231,6 +231,13 @@
 	  }
 	});
 	
+	window.onload = function () {
+	  if (window.AndroidInterface && window.AndroidInterface.onEditorReady) {
+		window.AndroidInterface.onEditorReady();
+	  }
+	};
+
+	
 	
 
 

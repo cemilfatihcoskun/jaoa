@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.sstek.jaoa.old.RichEditorView
 import jp.wasabeef.richeditor.RichEditor
 import kotlinx.coroutines.flow.collectLatest
 

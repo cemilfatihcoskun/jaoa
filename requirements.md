@@ -4,7 +4,7 @@
 + Düzenlenen bir belgede üstüne yaz haricinde farklı kaydet seçeneği bulunabilmelidir.
 * Açık olan belge için paylaş kısmında uygulamalar, Bluetooth vs. paylaşımı yapılabilmelidir.
 * Oluşturulan belgeler Internal Storage’de saklanabilmelidir. Bu alandaki dosyaları görmek için kullanıcı isteği ile şifre koruması eklenebilmelidir.
-* İzinlerde İnternet izni olmamalıdır ve zaruri olmayan hiçbir izin kullanılmamalıdır.
++ İzinlerde İnternet izni olmamalıdır ve zaruri olmayan hiçbir izin kullanılmamalıdır.
 * Belge uygulama üzerinden yazdırılabilmelidir.
 * Uygulamada Türkçe ve İngilizce desteği sağlanmalıdır.
 
@@ -28,7 +28,7 @@
 * Diğer dosya türlerinin PDF’e dönüştürebilme
 																		
 # Desteklenecek Uzantılar
-* Word için: doc, dox, dot, dotx, odt, ott, rtf, txt, html, htm, pdf, docm
+* Word için: doc, docx, dot, dotx, odt, ott, rtf, txt, html, htm, pdf, docm
 * Excel için: xls, xlsx, xlt, xltx, csv, ods, ots, xml, dif, xlsm
 * PowerPoint için: pptm, ppt, pptx, pps, ppsx, pot, potx, odp, otp
 	
