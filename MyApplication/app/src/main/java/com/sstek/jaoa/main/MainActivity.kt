@@ -60,18 +60,30 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun handleIncomingIntent(intent: Intent?) {
-        intent?.let {
-            if (it.action == Intent.ACTION_VIEW) {
-                val dataUri = it.data
+        intent?.let { intent ->
+            if (intent.action == Intent.ACTION_VIEW) {
+                val dataUri = intent.data
                 if (dataUri != null) {
                     try {
-                        // Kalıcı izin al
-                        contentResolver.takePersistableUriPermission(
-                            dataUri,
-                            Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
-                        )
+                        Log.d("DocxFiles", "dataUri=$dataUri")
+
+                        // Intent'ten izin bayraklarını al
+                        val flags = intent.flags and
+                                (Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                                        Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+
+                        // Kalıcı izin ancak persistable bayrağı varsa alınır
+                        if ((flags and Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION) != 0) {
+                            contentResolver.takePersistableUriPermission(dataUri, flags)
+                            Log.d("DocxFiles", "Persistable permission taken for $dataUri")
+                        } else {
+                            Log.d("DocxFiles", "Persistable permission NOT available for $dataUri")
+                        }
+
+                        // ViewModel'e URI'yı set et
                         intentViewModel.setIntentUri(dataUri)
                         Log.d("DocxFiles", "Received docx Uri from external app: $dataUri")
+
                     } catch (e: SecurityException) {
                         Log.e("DocxFiles", "Permission denied for Uri: $dataUri", e)
                         intentViewModel.showToast("Dosya izni alınamadı, lütfen dosyayı uygulama içinden seçin.")
@@ -80,6 +92,7 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
 
     @androidx.compose.runtime.Composable
     private fun HandleIntentUri(uri: Uri, navController: NavHostController, viewModel: IntentViewModel) {

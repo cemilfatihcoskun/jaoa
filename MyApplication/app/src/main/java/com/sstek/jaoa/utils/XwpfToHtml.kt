@@ -122,7 +122,6 @@ fun xwpfToHtml(document: XWPFDocument): String {
         html.append("</footer>")
     }
 
-    html.append("</body></html>")
     return html.toString()
 }
 
@@ -143,7 +142,7 @@ fun paragraphToHtml(paragraph: XWPFParagraph): String {
             if (lineVal != null) (lineVal as BigInteger).toDouble() / 240 else null
         }
     } catch (e: Exception) {
-        println("xwpftohtml, ${e.message}")
+        null
     }
 
     val styleParts = mutableListOf("text-align:$alignment;")
@@ -153,7 +152,19 @@ fun paragraphToHtml(paragraph: XWPFParagraph): String {
 
     val styleAttr = styleParts.joinToString(" ")
 
-    val tag = "p" // heading kontrolü varsa ekle
+    // 💡 Burada heading kontrolü yap
+    val styleId = paragraph.style?.replace(" ", "")?.lowercase()
+    val tag = when (styleId) {
+        "heading1" -> "h1"
+        "heading2" -> "h2"
+        "heading3" -> "h3"
+        "heading4" -> "h4"
+        "heading5" -> "h5"
+        "heading6" -> "h6"
+        else -> "p"
+    }
+
+
 
     html.append("<$tag style=\"$styleAttr\">")
     for (run in paragraph.runs) {
@@ -163,6 +174,7 @@ fun paragraphToHtml(paragraph: XWPFParagraph): String {
 
     return html.toString()
 }
+
 
 
 fun runToHtml(run: XWPFRun): String {

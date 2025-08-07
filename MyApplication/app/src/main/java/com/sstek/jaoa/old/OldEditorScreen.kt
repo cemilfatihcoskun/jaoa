@@ -1,4 +1,4 @@
-package com.sstek.jaoa.editor
+package com.sstek.jaoa.old
 
 import EditorToolbar
 import android.net.Uri
@@ -19,8 +19,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.sstek.jaoa.old.RichEditorView
+import com.sstek.jaoa.editor.EditorViewModel
 import jp.wasabeef.richeditor.RichEditor
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 
 
@@ -76,7 +77,7 @@ fun OldEditorScreen(
                     totalPages = numbers[1]
                 } catch (_: Exception) {}
             }
-            kotlinx.coroutines.delay(500)
+            delay(500)
         }
     }
 

@@ -72,6 +72,11 @@
     .ql-size-48pt { font-size: 64px; }
     .ql-size-72pt { font-size: 96px; }
     
+    h1 { font-size: 24px; }
+    h2 { font-size: 22px; }
+    h3 { font-size: 19px; }
+    h4 { font-size: 17px; }
+    
     .ql-lineheight option {
   color: black; /* Eğer görünmüyorsa beyaz kalıyor olabilir */
 }
@@ -81,6 +86,15 @@
 
   <!-- Toolbar -->
   <div id="toolbar">
+	<span class="ql-formats">
+	  <select class="ql-header">
+		<option selected></option>
+		<option value="1">Başlık 1</option>
+	    <option value="2">Başlık 2</option>
+		<option value="3">Başlık 3</option>
+	  </select>
+	</span>
+	
     <span class="ql-formats">
       <select class="ql-font">
         <option value="jaoa_calibri" selected>Calibri</option>
@@ -199,13 +213,15 @@
 
 
     // Android'den içerik alma
-    window.setHtmlContent = function(content) {
-      try {
-        quill.clipboard.dangerouslyPasteHTML(content);
-      } catch(e) {
-        console.error("setHtmlContent error", e);
-      }
-    };
+   window.setHtmlContent = function(content, isInitial) {
+	  try {
+		quill.clipboard.dangerouslyPasteHTML(content);
+		quill.history.clear();
+	  } catch(e) {
+		console.error("setHtmlContent error", e);
+	  }
+	};
+
 
     // Android'e içerik gönderme
     window.getHtmlContent = function() {

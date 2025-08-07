@@ -1,11 +1,12 @@
-<?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
+    package="com.sstek.jaoa"
     android:installLocation="auto">
 
+    <!-- 📂 İzinler -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
-    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28"/>
+    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" tools:ignore="ScopedStorage" />
     <uses-permission android:name="android.permission.READ_MEDIA_DOCUMENTS" />
 
     <application
@@ -23,53 +24,22 @@
             android:name=".main.MainActivity"
             android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
             android:exported="true">
+
+            <!-- Ana giriş noktası -->
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            <!-- .docx için ACTION_VIEW, ACTION_EDIT, ACTION_PICK -->
-            <intent-filter android:priority="50">
+
+            <!-- .docx açmak için yeterli olan intent filter -->
+            <intent-filter android:priority="100">
                 <action android:name="android.intent.action.VIEW" />
-                <action android:name="android.intent.action.EDIT" />
-                <action android:name="android.intent.action.PICK" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <data android:scheme="content" android:host="*" android:mimeType="application/vnd.openxmlformats-officedocument.wordprocessingml.document" />
-                <data android:scheme="file" android:host="*" android:mimeType="application/vnd.openxmlformats-officedocument.wordprocessingml.document" />
-                <data android:scheme="content" android:host="*" android:mimeType="application/octet-stream" />
-                <data android:scheme="file" android:host="*" android:mimeType="application/octet-stream" />
-                <data android:scheme="content" android:host="*" android:mimeType="*/*" />
-                <data android:scheme="file" android:host="*" android:mimeType="*/*" />
-            </intent-filter>
-            <!-- .docx için pathPattern ile özel eşleşme -->
-            <intent-filter android:priority="50">
-                <action android:name="android.intent.action.VIEW" />
-                <action android:name="android.intent.action.EDIT" />
-                <action android:name="android.intent.action.PICK" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <data android:scheme="content" android:host="*" android:pathPattern=".*\\.docx" android:mimeType="*/*" />
-                <data android:scheme="file" android:host="*" android:pathPattern=".*\\.docx" android:mimeType="*/*" />
-                <data android:scheme="content" android:host="*" android:pathPattern=".*\\..*\\.docx" android:mimeType="*/*" />
-                <data android:scheme="file" android:host="*" android:pathPattern=".*\\..*\\.docx" android:mimeType="*/*" />
-                <data android:scheme="content" android:host="*" android:pathPattern=".*\\..*\\..*\\.docx" android:mimeType="*/*" />
-                <data android:scheme="file" android:host="*" android:pathPattern=".*\\..*\\..*\\.docx" android:mimeType="*/*" />
-            </intent-filter>
-            <!-- .docx için ACTION_OPEN_DOCUMENT -->
-            <intent-filter android:priority="50">
-                <action android:name="android.intent.action.OPEN_DOCUMENT" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <data android:mimeType="application/vnd.openxmlformats-officedocument.wordprocessingml.document" />
-                <data android:mimeType="application/octet-stream" />
-                <data android:mimeType="*/*" />
-            </intent-filter>
-            <!-- .docx için ACTION_GET_CONTENT -->
-            <intent-filter android:priority="50">
-                <action android:name="android.intent.action.GET_CONTENT" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.OPENABLE" />
-                <data android:mimeType="application/vnd.openxmlformats-officedocument.wordprocessingml.document" />
-                <data android:mimeType="application/octet-stream" />
-                <data android:mimeType="*/*" />
+                <data android:scheme="content" android:mimeType="application/vnd.openxmlformats-officedocument.wordprocessingml.document" />
+                <data android:scheme="file" android:mimeType="application/vnd.openxmlformats-officedocument.wordprocessingml.document" />
             </intent-filter>
+
         </activity>
 
     </application>

@@ -42,9 +42,10 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
 
         _isLoading.value = true
         viewModelScope.launch(Dispatchers.IO) {
-            val context = getApplication<Application>().applicationContext
+            val application = getApplication<Application>()
             val inputStream = if (uri.scheme == "content") {
-                context.contentResolver.openInputStream(uri)
+                Log.d("EditorViewModel", "uri=$uri")
+                application.contentResolver.openInputStream(uri)
             } else if (uri.scheme == "file" || uri.scheme == null) {
                 Log.d("EditorViewModel", "${uri.path}")
                 try {
@@ -90,7 +91,7 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
             viewModelScope.launch(Dispatchers.IO) {
                 try {
                     val context = getApplication<Application>().applicationContext
-                    val doc = convertHtmlToXwpf(context, html)  // context gönder!
+                    val doc = convertHtmlToXwpf(context, html)
                     context.contentResolver.openOutputStream(uri)?.use { out ->
                         doc.write(out)
                     }

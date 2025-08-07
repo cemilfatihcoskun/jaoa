@@ -10,6 +10,9 @@
 * Font ayarlama çözüldü. Şu an arial, calibri, times new roman 3 farklı font var. 8pt dan başlayarak
 72pt kadar düzenli bir sıra olmadan font boyutu ayarlanabiliyor.
 * Açılış ekranından docx dosyaları seçilebiliyor. Android 31 (12) ve 35 (15) te denendi.
+* Birlikte açla docx dosyaları açılabiliyor.
+* Geri gitme, ileri gitme komutu eklendi.
+* Uygulama ana ekranında documents, downloads klasöründeki docx dosyaları listeleniyor.
 
 ### Yapılamayanlar
 * Tablo okuma sıkıntılı metinler tablonun dışına taşıyor.

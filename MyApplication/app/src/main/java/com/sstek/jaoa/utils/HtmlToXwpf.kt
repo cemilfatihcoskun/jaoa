@@ -18,8 +18,18 @@ import java.util.Base64
 val DEFAULT_WIDTH_UNITS_TO_EMU = 200.0
 val DEFAULT_HEIGHT_UNITS_TO_EMU = 200.0
 
+fun loadTemplateDocument(context: Context): XWPFDocument {
+    // assets'den InputStream al
+    val inputStream = context.assets.open("template.docx")
+    // XWPFDocument'i InputStream'den oluştur
+    return XWPFDocument(inputStream).also {
+        inputStream.close()
+    }
+}
+
+
 fun convertHtmlToXwpf(context: Context, html: String): XWPFDocument {
-    val document = XWPFDocument()
+    val document = loadTemplateDocument(context)
     val body = Jsoup.parseBodyFragment(html).body()
 
     println("HtmlToXwpf, $html")
@@ -71,11 +81,10 @@ fun htmlToXwpf(
                     spacing.line = BigInteger.valueOf((lh * 240).toLong())
                     spacing.lineRule = org.openxmlformats.schemas.wordprocessingml.x2006.main.STLineSpacingRule.EXACT
                 }
-
             }
         }
 
-        is Element -> when (element.tagName()) {
+        is Element -> when (element.tagName().lowercase()) {
             "ul", "ol" -> {
                 val isOrdered = element.tagName() == "ol"
                 val numId = if (isOrdered) createDecimalNumbering(document) else createBulletNumbering(document)
@@ -109,9 +118,80 @@ fun htmlToXwpf(
                 htmlInlineToSingleRun(context, element, run, newStyle)
             }
 
+            // **Header tag'ları için burada stil ata**
+            "h1", "h2", "h3", "h4", "h5", "h6" -> {
+                val para = document.createParagraph().apply {
+                    spacingBefore = 0
+                    spacingAfter = 0
+                }
+
+                para.style = when (element.tagName().lowercase()) {
+                    "h1" -> "Heading1"
+                    "h2" -> "Heading2"
+                    "h3" -> "Heading3"
+                    "h4" -> "Heading4"
+                    "h5" -> "Heading5"
+                    "h6" -> "Heading6"
+                    else -> null
+                }
+
+                val newStyle = updateStyleForElement(element, inheritedStyle)
+
+                // Satır aralığı uygula
+                newStyle.lineHeight?.let { lh ->
+                    val pPr = para.ctp.pPr ?: para.ctp.addNewPPr()
+                    val spacing = pPr.spacing ?: pPr.addNewSpacing()
+                    spacing.line = BigInteger.valueOf((lh * 240).toLong())
+                    spacing.lineRule = org.openxmlformats.schemas.wordprocessingml.x2006.main.STLineSpacingRule.EXACT
+                }
+
+                newStyle.bold = true
+
+                newStyle.fontSize = when(element.tagName().lowercase()) {
+                    "h1" -> 18
+                    "h2" -> 16
+                    "h3" -> 14
+                    "h4" -> 13
+                    "h5" -> 12
+                    "h6" -> 11
+                    else -> newStyle.fontSize
+                }
 
 
-            "p", "div", "span", "b", "i", "strong", "u", "em" -> {
+                newStyle.lineHeight = newStyle.lineHeight.takeIf { it in 0.5..5.0 } ?: 1.0
+                val pPr = para.ctp.pPr ?: para.ctp.addNewPPr()
+                val spacing = pPr.spacing ?: pPr.addNewSpacing()
+                spacing.line = BigInteger.valueOf((newStyle.lineHeight * 240).toLong())
+                spacing.lineRule = org.openxmlformats.schemas.wordprocessingml.x2006.main.STLineSpacingRule.EXACT
+
+                for (child in element.childNodes()) {
+                    htmlToXwpf(context, child, document, newStyle, currentNumId, currentIlvl, para)
+                }
+            }
+
+            "p" -> {
+                // Normal paragraf
+                val para = document.createParagraph().apply {
+                    spacingBefore = 0
+                    spacingAfter = 0
+                }
+
+                val newStyle = updateStyleForElement(element, inheritedStyle)
+
+                // Satır aralığı vb. stil ayarları (isteğe bağlı)
+                newStyle.lineHeight?.let { lh ->
+                    val pPr = para.ctp.pPr ?: para.ctp.addNewPPr()
+                    val spacing = pPr.spacing ?: pPr.addNewSpacing()
+                    spacing.line = BigInteger.valueOf((lh * 240).toLong())
+                    spacing.lineRule = org.openxmlformats.schemas.wordprocessingml.x2006.main.STLineSpacingRule.EXACT
+                }
+
+                for (child in element.childNodes()) {
+                    htmlToXwpf(context, child, document, newStyle, currentNumId, currentIlvl, para)
+                }
+            }
+
+            "div", "span", "b", "i", "strong", "u", "em" -> {
                 val para = paragraph ?: document.createParagraph()
                 if (paragraph == null) {
                     para.spacingBefore = 0
@@ -123,26 +203,6 @@ fun htmlToXwpf(
                 setParagraphAlignment(para, textAlign)
 
                 val newStyle = updateStyleForElement(element, inheritedStyle)
-                for (child in element.childNodes()) {
-                    htmlToXwpf(context, child, document, newStyle, currentNumId, currentIlvl, para)
-                }
-            }
-
-            "h1", "h2", "h3", "h4", "h5", "h6" -> {
-                val para = document.createParagraph()
-                para.spacingBefore = 0
-                para.spacingAfter = 0
-                para.style = "Heading${element.tagName().substring(1)}"
-
-                val newStyle = updateStyleForElement(element, inheritedStyle).apply {
-                    fontSize = when (element.tagName()) {
-                        "h1" -> 32; "h2" -> 28; "h3" -> 24
-                        "h4" -> 20; "h5" -> 16; "h6" -> 14
-                        else -> 12
-                    }
-                    bold = true
-                }
-
                 for (child in element.childNodes()) {
                     htmlToXwpf(context, child, document, newStyle, currentNumId, currentIlvl, para)
                 }
@@ -175,7 +235,6 @@ fun htmlToXwpf(
                             else -> XWPFDocument.PICTURE_TYPE_PNG
                         }
 
-                        // Stil ve attribute'dan boyutları al
                         val style = element.attr("style")
                         val widthPx = Regex("width\\s*:\\s*(\\d+)px").find(style)?.groupValues?.get(1)?.toIntOrNull()
                         val heightPx = Regex("height\\s*:\\s*(\\d+)px").find(style)?.groupValues?.get(1)?.toIntOrNull()
@@ -200,7 +259,6 @@ fun htmlToXwpf(
                     println("HATA: Resim eklenirken: ${e.message}")
                 }
             }
-
 
             "table" -> {
                 val rows = element.getElementsByTag("tr")

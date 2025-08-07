@@ -35,7 +35,7 @@ fun ApplicationNavigationHost(navController: NavHostController) {
             arguments = listOf(navArgument("fileUri") { type = NavType.StringType })
         ) { backStackEntry ->
             val fileUriString = backStackEntry.arguments?.getString("fileUri")
-            val fileUri = fileUriString?.let { Uri.parse(Uri.decode(it)) }
+            val fileUri = fileUriString?.let { Uri.parse(it) }
 
             QuillEditorScreen(
                 filePath = fileUri,
