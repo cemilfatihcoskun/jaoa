@@ -7,6 +7,7 @@ import org.apache.poi.xwpf.usermodel.*
 import org.jsoup.Jsoup
 import org.jsoup.nodes.*
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTAbstractNum
+import org.openxmlformats.schemas.wordprocessingml.x2006.main.STHighlightColor
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.STJc
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.STNumberFormat
 import java.io.ByteArrayInputStream
@@ -64,7 +65,11 @@ fun htmlToXwpf(
                 if (inheritedStyle.underline) underline = UnderlinePatterns.SINGLE
                 setColor(inheritedStyle.color.removePrefix("#"))
                 inheritedStyle.backgroundColor?.let {
-                    setTextHighlightColor(rgbIntToHighlightColorName(it.removePrefix("#")))
+                    try {
+                        setTextHighlightColor(backgroundColorNameNormalizationQuillToXwpf(it))
+                    } catch (e: Exception) {
+                        println("htmltoxwpf, ${e.message}")
+                    }
                 }
             }
 
@@ -111,7 +116,12 @@ fun htmlToXwpf(
                     if (newStyle.underline) underline = UnderlinePatterns.SINGLE
                     setColor(newStyle.color.removePrefix("#"))
                     newStyle.backgroundColor?.let {
-                        setTextHighlightColor(rgbIntToHighlightColorName(it.removePrefix("#")))
+                        println("htmltoxwpf, $it")
+                        try {
+                            setTextHighlightColor(backgroundColorNameNormalizationQuillToXwpf(it))
+                        } catch (e: Exception) {
+                            println("htmltoxwpf, ${e.message}")
+                        }
                     }
                 }
 
@@ -317,7 +327,12 @@ fun htmlInlineToSingleRun(
                 if (newStyle.underline) run.underline = UnderlinePatterns.SINGLE
                 run.setColor(newStyle.color.removePrefix("#"))
                 newStyle.backgroundColor?.let {
-                    run.setTextHighlightColor(rgbIntToHighlightColorName(it.removePrefix("#")))
+                    println("htmltoxwpf, $it")
+                    try {
+                        run.setTextHighlightColor(backgroundColorNameNormalizationQuillToXwpf(it))
+                    } catch (e: Exception) {
+                        println("htmltoxwpf, ${e.message}")
+                    }
                 }
 
                 htmlInlineToSingleRun(context, child, run, newStyle)
@@ -420,7 +435,7 @@ fun updateStyleForElement(element: Element, inheritedStyle: StyleState): StyleSt
             newStyle.underline = true
         }
         styleAttr.extractCssColor()?.let { newStyle.color = normalizeColor(it) }
-        styleAttr.extractBackgroundColor()?.let { newStyle.backgroundColor = normalizeColor(it) }
+        styleAttr.extractBackgroundColor()?.let { newStyle.backgroundColor = it }
         styleAttr.extractFontSize()?.let { newStyle.fontSize = it }
         styleAttr.extractFontFamily()?.let { newStyle.fontFamilyName = it }
     }
@@ -506,24 +521,17 @@ fun getMaxColumns(rows: List<Element>): Int {
     return max
 }
 
-fun rgbIntToHighlightColorName(rgb: String): String {
-    return when (rgb.uppercase()) {
-        "FFFF00" -> "yellow"
-        "00FF00" -> "green"
-        "00FFFF" -> "turquoise"
-        "FF00FF" -> "pink"
-        "0000FF" -> "blue"
-        "FF0000" -> "red"
-        "808080" -> "gray"
-        "000000" -> "black"
-        "FFFFFF" -> "white"
-        "000080" -> "darkBlue"
-        "800000" -> "darkRed"
-        "808000" -> "darkYellow"
-        "008000" -> "darkGreen"
-        "008080" -> "darkTeal"
-        "800080" -> "darkPurple"
-        "666666" -> "gray50"
-        else -> "none"
+fun backgroundColorNameNormalizationQuillToXwpf(name: String): String {
+    return when (name) {
+        "darkblue" -> "darkBlue"
+        "darkcyan" -> "darkCyan"
+        "darkgreen" -> "darkGreen"
+        "darkmagenta" -> "darkMagenta"
+        "darkred" -> "darkRed"
+        "rgb(139, 128, 0)" -> "darkYellow"
+        "darkgray" -> "darkGray"
+        "lightgray" -> "lightGray"
+        else -> name
     }
 }
+

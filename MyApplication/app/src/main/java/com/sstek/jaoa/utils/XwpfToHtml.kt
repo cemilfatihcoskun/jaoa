@@ -164,6 +164,9 @@ fun paragraphToHtml(paragraph: XWPFParagraph): String {
         else -> "p"
     }
 
+    if (styleId != null) {
+        println("xwpftohtml $styleId")
+    }
 
 
     html.append("<$tag style=\"$styleAttr\">")
@@ -196,7 +199,7 @@ fun runToHtml(run: XWPFRun): String {
     if (run.isBold) styles.add("font-weight:bold;")
     if (run.isItalic) styles.add("font-style:italic;")
     if (run.underline != UnderlinePatterns.NONE) styles.add("text-decoration:underline;")
-    val highlight = run.textHighlightColor.toString()
+    val highlight = backgroundColorNameNormalizationXwpfToQuill(run.textHighlightColor.toString())
     if (!highlight.isNullOrBlank() && highlight.lowercase() != "none") styles.add("background-color:$highlight;")
     val color = run.color
     if (!color.isNullOrBlank()) styles.add("color:#$color;")
@@ -299,3 +302,11 @@ fun escapeHtml(text: String): String {
         .replace("\"", "&quot;")
         .replace("'", "&#39;")
 }
+
+fun backgroundColorNameNormalizationXwpfToQuill(name: String): String {
+    return when (name) {
+        "darkYellow" -> "rgb(139, 128, 0)"
+        else -> name
+    }
+}
+

@@ -27,7 +27,12 @@
       margin: 0;
       font-family: jaoa_arial, sans-serif;
       font-size: 16px;
+      
     }
+    
+    * {
+		line-height: 1;
+	}
 
     #toolbar {
       position: sticky;
@@ -72,13 +77,60 @@
     .ql-size-48pt { font-size: 64px; }
     .ql-size-72pt { font-size: 96px; }
     
-    h1 { font-size: 24px; }
-    h2 { font-size: 22px; }
-    h3 { font-size: 19px; }
-    h4 { font-size: 17px; }
+   .ql-editor h1 {
+	  font-size: 24px !important;
+	  font-weight: bold;
+  margin-top: 12pt;   /* ~16px */
+  margin-bottom: 12pt;
+  line-height: 1.15;
+	}
+	
+	.ql-editor h2 {
+	  font-size: 22px !important;
+	  font-weight: bold;
+  margin-top: 6pt;     /* ~8px */
+  margin-bottom: 6pt;
+  line-height: 1.15;
+	}
+	
+	.ql-editor h3 {
+	  font-size: 19px !important;
+	  font-weight: bold;
+  margin-top: 6pt;     /* ~8px */
+  margin-bottom: 6pt;
+  line-height: 1.15;
+	}
+
+
     
     .ql-lineheight option {
   color: black; /* Eğer görünmüyorsa beyaz kalıyor olabilir */
+}
+
+.ql-line-height {
+	min-width: 60px;
+}
+
+
+
+.ql-line-height .ql-picker-item[data-value="1"]::before,
+.ql-line-height .ql-picker-label[data-value="1"]::before {
+ content: '1'!important ;
+}
+
+.ql-line-height .ql-picker-item[data-value="1.15"]::before,
+.ql-line-height .ql-picker-label[data-value="1.15"]::before {
+ content: '1.15'!important;
+}
+
+.ql-line-height .ql-picker-item[data-value="1.5"]::before,
+.ql-line-height .ql-picker-label[data-value="1.5"]::before {
+ content: '1.5'!important;
+}
+
+.ql-line-height .ql-picker-item[data-value="2"]::before,
+.ql-line-height .ql-picker-label[data-value="2"]::before {
+ content: '2'!important;
 }
   </style>
 </head>
@@ -125,13 +177,11 @@
     </span>
     
     <span class="ql-formats">
-      <select class="ql-lineheight">
-        <option selected value="1">1</option>
+      <select class="ql-line-height">
+        <option value="1" selected>1</option>
         <option value="1.15">1.15</option>
         <option value="1.5">1.5</option>
         <option value="2">2</option>
-        <option value="2.5">2.5</option>
-        <option value="3">3</option>
       </select>
     </span>
 
@@ -144,7 +194,25 @@
 
     <span class="ql-formats">
       <select class="ql-color"></select>
-      <select class="ql-background"></select>
+      <select class="ql-background">
+		<option selected></option>
+		<option value="black"></option>
+		<option value="blue"></option>
+		<option value="cyan"></option>
+		<option value="green"></option>
+		<option value="magenta"></option>
+		<option value="red"></option>
+		<option value="yellow"></option>
+		<option value="white"></option>
+		<option value="darkBlue"></option>
+		<option value="darkCyan"></option>
+		<option value="darkGreen"></option>
+		<option value="darkMagenta"></option>
+		<option value="darkRed"></option>
+		<option value="rgb(139, 128, 0)"></option>
+		<option value="darkGray"></option>
+		<option value="lightGray"></option>
+	  </select>
     </span>
 
     <span class="ql-formats">
@@ -192,12 +260,16 @@
     Quill.register(Size, true);
 
     // Satır aralığı formatı (line-height)
-    const Parchment = Quill.import('parchment');
-	const LineHeightStyle = new Parchment.Attributor.Style('lineheight', 'line-height', {
+    var Parchment = window.Quill.import('parchment');
+	const config = {
 	  scope: Parchment.Scope.BLOCK,
-	  whitelist: ['1', '1.15', '1.5', '2', '2.5', '3']
-	});
-	Quill.register(LineHeightStyle, true);
+	  whitelist: ['1','1.15','1.5','2']
+	}
+	var lineHtClass = new Parchment.Attributor.Class('line-height','ql-line-height', config);
+	var lineHtStyle = new Parchment.Attributor.Style('line-height','line-height', config);
+
+	Parchment.register(lineHtClass);
+	Parchment.register(lineHtStyle);
 	
 
   const quill = new Quill('#editor-container', {
@@ -243,6 +315,16 @@
 		// Örneğin seçili resim varsa ve overlay açıksa:
 		if (imageResize && imageResize.img) {
 		  imageResize.onUpdate();
+		}
+	  }
+	});
+	
+	quill.on('selection-change', function(range) {
+	  if (range) {
+		const format = quill.getFormat(range);
+		if (format['line-height'] === '1') {
+		  // Eğer hiç uygulanmadıysa (çünkü tarayıcı atlamış olabilir), zorla uygula
+		  quill.format('line-height', '1');
 		}
 	  }
 	});

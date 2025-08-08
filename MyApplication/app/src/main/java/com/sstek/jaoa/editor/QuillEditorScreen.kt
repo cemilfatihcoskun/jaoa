@@ -195,9 +195,15 @@ fun QuillEditorScreen(
         }
 
         AndroidView(
-            modifier = Modifier.weight(1f).fillMaxWidth(),
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .imePadding(),
             factory = { ctx ->
                 WebView(ctx).apply {
+                    fitsSystemWindows = true
+
                     settings.javaScriptEnabled = true
                     settings.domStorageEnabled = true
                     settings.allowFileAccess = true

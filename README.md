@@ -13,10 +13,10 @@
 * Birlikte açla docx dosyaları açılabiliyor.
 * Geri gitme, ileri gitme komutu eklendi.
 * Uygulama ana ekranında documents, downloads klasöründeki docx dosyaları listeleniyor.
+* Arkaplan rengi seçilebiliyor.
 
 ### Yapılamayanlar
 * Tablo okuma sıkıntılı metinler tablonun dışına taşıyor.
 * Büyük dosyalar açılıyor ama düzenlenirken çok kasıyor.
 * Sayfa boyutu hesaplama sıkıntılı.
-* Arkaplan rengi seçimi bazen çalışıyor bazen çalışmıyor.
 
