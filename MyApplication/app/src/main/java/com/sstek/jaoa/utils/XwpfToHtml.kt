@@ -145,8 +145,10 @@ fun paragraphToHtml(paragraph: XWPFParagraph): String {
         null
     }
 
+    println("xwpftohtml lineheight $lineSpacing")
+
     val styleParts = mutableListOf("text-align:$alignment;")
-    if (lineSpacing != null && lineSpacing != 1.0) {
+    if (lineSpacing != null && lineSpacing != 0.0 && lineSpacing != 1.0) {
         styleParts.add("line-height:${lineSpacing};")
     }
 

@@ -9,6 +9,7 @@ import org.jsoup.nodes.*
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTAbstractNum
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.STHighlightColor
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.STJc
+import org.openxmlformats.schemas.wordprocessingml.x2006.main.STLineSpacingRule
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.STNumberFormat
 import java.io.ByteArrayInputStream
 import java.io.File
@@ -56,7 +57,12 @@ fun htmlToXwpf(
             val text = element.text()
             if (text.isBlank()) return
 
-            val run = (paragraph ?: document.createParagraph()).createRun().apply {
+            val para = paragraph ?: document.createParagraph()
+            para.spacingBefore = 0
+            para.spacingAfter = 0
+            inheritedStyle.lineHeight?.let { applyLineHeight(para, it) }
+
+            val run = para.createRun().apply {
                 setText(text)
                 isBold = inheritedStyle.bold
                 isItalic = inheritedStyle.italic
@@ -72,22 +78,8 @@ fun htmlToXwpf(
                     }
                 }
             }
-
-            val para = paragraph ?: document.createParagraph()
-
-            if (paragraph == null) {
-                para.spacingBefore = 0
-                para.spacingAfter = 0
-
-                // Satır aralığını uygula
-                inheritedStyle.lineHeight?.let { lh ->
-                    val pPr = para.ctp.pPr ?: para.ctp.addNewPPr()
-                    val spacing = pPr.spacing ?: pPr.addNewSpacing()
-                    spacing.line = BigInteger.valueOf((lh * 240).toLong())
-                    spacing.lineRule = org.openxmlformats.schemas.wordprocessingml.x2006.main.STLineSpacingRule.EXACT
-                }
-            }
         }
+
 
         is Element -> when (element.tagName().lowercase()) {
             "ul", "ol" -> {
@@ -149,10 +141,7 @@ fun htmlToXwpf(
 
                 // Satır aralığı uygula
                 newStyle.lineHeight?.let { lh ->
-                    val pPr = para.ctp.pPr ?: para.ctp.addNewPPr()
-                    val spacing = pPr.spacing ?: pPr.addNewSpacing()
-                    spacing.line = BigInteger.valueOf((lh * 240).toLong())
-                    spacing.lineRule = org.openxmlformats.schemas.wordprocessingml.x2006.main.STLineSpacingRule.EXACT
+                    applyLineHeight(para, lh)
                 }
 
                 newStyle.bold = true
@@ -172,7 +161,7 @@ fun htmlToXwpf(
                 val pPr = para.ctp.pPr ?: para.ctp.addNewPPr()
                 val spacing = pPr.spacing ?: pPr.addNewSpacing()
                 spacing.line = BigInteger.valueOf((newStyle.lineHeight * 240).toLong())
-                spacing.lineRule = org.openxmlformats.schemas.wordprocessingml.x2006.main.STLineSpacingRule.EXACT
+                spacing.lineRule = org.openxmlformats.schemas.wordprocessingml.x2006.main.STLineSpacingRule.AUTO
 
                 for (child in element.childNodes()) {
                     htmlToXwpf(context, child, document, newStyle, currentNumId, currentIlvl, para)
@@ -190,10 +179,8 @@ fun htmlToXwpf(
 
                 // Satır aralığı vb. stil ayarları (isteğe bağlı)
                 newStyle.lineHeight?.let { lh ->
-                    val pPr = para.ctp.pPr ?: para.ctp.addNewPPr()
-                    val spacing = pPr.spacing ?: pPr.addNewSpacing()
-                    spacing.line = BigInteger.valueOf((lh * 240).toLong())
-                    spacing.lineRule = org.openxmlformats.schemas.wordprocessingml.x2006.main.STLineSpacingRule.EXACT
+                    applyLineHeight(para, lh)
+
                 }
 
                 for (child in element.childNodes()) {
@@ -456,7 +443,10 @@ fun updateStyleForElement(element: Element, inheritedStyle: StyleState): StyleSt
         ?: "Calibri" // Bulamazsa default font
     newStyle.fontFamilyName = fontNameFormatted
 
-    styleAttr.extractLineHeight()?.let { newStyle.lineHeight = it }
+    styleAttr.extractLineHeight()?.let {
+        println("htmltoxwpf lineheight $it")
+        newStyle.lineHeight = it
+    }
 
     return newStyle
 }
@@ -535,3 +525,9 @@ fun backgroundColorNameNormalizationQuillToXwpf(name: String): String {
     }
 }
 
+fun applyLineHeight(para: XWPFParagraph, lineHeight: Double) {
+    val pPr = para.ctp.pPr ?: para.ctp.addNewPPr()
+    val spacing = pPr.spacing ?: pPr.addNewSpacing()
+    spacing.line = BigInteger.valueOf((lineHeight * 240).toLong())
+    spacing.lineRule = STLineSpacingRule.AUTO  // veya AUTO, dene hangisi uygunsa
+}
