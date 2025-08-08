@@ -46,7 +46,7 @@ fun toJaoaFontClass(fontFamily: String?): String? {
 
 fun xwpfToHtml(document: XWPFDocument): String {
     val html = StringBuilder()
-    html.append("<meta charset=\"utf-8\">")
+    //html.append("<meta charset=\"utf-8\">")
 
     // Header
     document.headerList.forEach { header ->

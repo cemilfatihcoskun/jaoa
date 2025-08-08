@@ -21,12 +21,23 @@ val DEFAULT_WIDTH_UNITS_TO_EMU = 200.0
 val DEFAULT_HEIGHT_UNITS_TO_EMU = 200.0
 
 fun loadTemplateDocument(context: Context): XWPFDocument {
-    // assets'den InputStream al
     val inputStream = context.assets.open("template.docx")
-    // XWPFDocument'i InputStream'den oluştur
-    return XWPFDocument(inputStream).also {
+    val document = XWPFDocument(inputStream).also {
         inputStream.close()
     }
+    // Eğer ilk paragraf boş ise sil
+    val paragraphs = document.paragraphs
+    if (paragraphs.isNotEmpty()) {
+        val firstPara = paragraphs[0]
+        if (firstPara.text.isBlank()) {
+            val bodyElements = document.bodyElements
+            if (bodyElements.isNotEmpty()) {
+                // İlk paragrafı bodyElements listesinden kaldır
+                document.removeBodyElement(document.getPosOfParagraph(firstPara))
+            }
+        }
+    }
+    return document
 }
 
 
@@ -169,24 +180,29 @@ fun htmlToXwpf(
             }
 
             "p" -> {
-                // Normal paragraf
+                // Paragraf tamamen boşsa atla
+                val isEmptyParagraph = element.allElements.none { it.ownText().isNotBlank() }
+
+                if (isEmptyParagraph) return
+
                 val para = document.createParagraph().apply {
                     spacingBefore = 0
                     spacingAfter = 0
+                    spacingBeforeLines = 0
+                    spacingAfterLines = 0
                 }
 
                 val newStyle = updateStyleForElement(element, inheritedStyle)
 
-                // Satır aralığı vb. stil ayarları (isteğe bağlı)
                 newStyle.lineHeight?.let { lh ->
                     applyLineHeight(para, lh)
-
                 }
 
                 for (child in element.childNodes()) {
                     htmlToXwpf(context, child, document, newStyle, currentNumId, currentIlvl, para)
                 }
             }
+
 
             "div", "span", "b", "i", "strong", "u", "em" -> {
                 val para = paragraph ?: document.createParagraph()
