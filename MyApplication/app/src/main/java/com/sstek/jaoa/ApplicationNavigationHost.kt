@@ -7,9 +7,11 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
-import com.sstek.jaoa.editor.QuillEditorScreen
-import com.sstek.jaoa.main.MainScreen
+import com.sstek.jaoa.word.QuillEditorScreen
+import com.sstek.jaoa.core.MainScreen
 import android.util.Log
+import com.sstek.jaoa.core.FileType
+import com.sstek.jaoa.excel.ExcelScreen
 
 @Composable
 fun ApplicationNavigationHost(navController: NavHostController) {
@@ -19,19 +21,17 @@ fun ApplicationNavigationHost(navController: NavHostController) {
     ) {
         composable("main") {
             MainScreen(
-                onOpenFile = { filePath ->
-                    Log.d("DocxFiles", "Navigating to editor from MainScreen: $filePath")
-                    navController.navigate("editor/${filePath.toString().replace("/", "%2F")}")
+                onOpenFile = { fileType, filePath ->
+                    navigate(navController, fileType, filePath)
                 },
-                onCreateNew = {
-                    Log.d("DocxFiles", "Navigating to editor for new file")
-                    navController.navigate("editor/") // Boş path → yeni dosya
+                onCreateNew = { fileType ->
+                    navigate(navController, fileType, null)
                 }
             )
         }
 
         composable(
-            route = "editor/{fileUri}",
+            route = "word/{fileUri}",
             arguments = listOf(navArgument("fileUri") { type = NavType.StringType })
         ) { backStackEntry ->
             val fileUriString = backStackEntry.arguments?.getString("fileUri")
@@ -43,5 +43,36 @@ fun ApplicationNavigationHost(navController: NavHostController) {
             )
         }
 
+        composable(
+            route = "excel/{fileUri}",
+            arguments = listOf(navArgument("fileUri") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val fileUriString = backStackEntry.arguments?.getString("fileUri")
+            val fileUri = fileUriString?.let { Uri.parse(it) }
+
+            ExcelScreen(
+                filePath = fileUri,
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+    }
+}
+
+fun navigate(navController: NavHostController, fileType: FileType, fileUri: Uri?) {
+    val uriEncoded = fileUri.let {
+        it.toString().replace("/", "%2F")
+    } ?: ""
+
+    Log.d("ApplicationNavigationHost", "$fileType, $fileUri")
+
+    when (fileType) {
+        FileType.DOCX -> navController.navigate("word/$uriEncoded")
+        FileType.DOC -> TODO()
+        FileType.XLSX -> navController.navigate("excel/$uriEncoded")
+        FileType.XLS -> TODO()
+        FileType.PPTX -> TODO()
+        FileType.PPT -> TODO()
+        FileType.UNKNOWN -> ""
     }
 }

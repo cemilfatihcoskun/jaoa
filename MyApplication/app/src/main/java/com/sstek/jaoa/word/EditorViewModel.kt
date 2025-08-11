@@ -1,4 +1,4 @@
-package com.sstek.jaoa.editor
+package com.sstek.jaoa.word
 
 import android.app.Application
 import android.net.Uri

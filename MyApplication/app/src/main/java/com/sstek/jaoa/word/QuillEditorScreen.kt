@@ -1,10 +1,8 @@
-package com.sstek.jaoa.editor
+package com.sstek.jaoa.word
 
 import android.app.Activity
-import android.content.Intent
 import android.net.Uri
 import android.webkit.WebView
-import android.webkit.WebViewClient
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*

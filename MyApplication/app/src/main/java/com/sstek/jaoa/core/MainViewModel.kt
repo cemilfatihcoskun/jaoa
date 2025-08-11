@@ -1,4 +1,4 @@
-package com.sstek.jaoa.main
+package com.sstek.jaoa.core
 
 import android.content.Context
 import androidx.lifecycle.ViewModel
