@@ -60,9 +60,11 @@ fun ApplicationNavigationHost(navController: NavHostController) {
 }
 
 fun navigate(navController: NavHostController, fileType: FileType, fileUri: Uri?) {
-    val uriEncoded = fileUri.let {
-        it.toString().replace("/", "%2F")
-    } ?: ""
+    var uriEncoded = ""
+    if (fileUri != null) {
+        uriEncoded = fileUri.toString().replace("/", "%2F")
+
+    }
 
     Log.d("ApplicationNavigationHost", "$fileType, $fileUri")
 
