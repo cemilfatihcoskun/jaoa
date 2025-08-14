@@ -126,6 +126,47 @@
 .ql-line-height .ql-picker-label[data-value="2"]::before {
  content: '2'!important;
 }
+
+@media print {
+  .ql-toolbar,
+  .ql-cursor {
+    display: none !important;
+  }
+
+  html, body {
+    height: auto !important;
+    overflow: visible !important;
+  }
+  
+  #editor {
+    width: 100%;
+    min-height: auto;
+    padding: 0;
+  }
+  
+  .image-resize-overlay,
+  .image-resize-display,
+  .image-resize-toolbar {
+    display: none !important;
+  }
+  
+  *:focus {
+    outline: none !important;
+    caret-color: transparent !important; /* İmleci gizle */
+  }
+
+  /* Quill editör içi için özel sınıf */
+  .ql-editor:focus {
+    outline: none !important;
+    caret-color: transparent !important;
+  }
+}
+
+#editor {
+    width: 100%;   /* WebView genişliğine göre ölçeklenecek */
+    min-height: 100vh; /*
+}
+
   </style>
 </head>
 <body>

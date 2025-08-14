@@ -17,6 +17,7 @@
   DisplaySize.prototype.constructor = DisplaySize;
   DisplaySize.prototype.onCreate = function() {
     this.display = document.createElement('div');
+    this.display.classList.add('image-resize-display');
     var styles = this.options.displayStyles;
     for (var k in styles) {
       this.display.style[k] = styles[k];
@@ -242,6 +243,7 @@
   Toolbar.prototype.onCreate = function() {
     var self = this;
     this.toolbar = document.createElement('div');
+    this.toolbar.classList.add('image-resize-toolbar');
     var styles = this.options.toolbarStyles;
     for (var k in styles) {
       this.toolbar.style[k] = styles[k];
@@ -428,6 +430,7 @@
     this.quill.root.addEventListener('input', this.checkImage, true);
 
     this.overlay = document.createElement('div');
+    this.overlay.classList.add('image-resize-overlay');
     var styles = this.options.overlayStyles;
     for (var k in styles) {
       this.overlay.style[k] = styles[k];

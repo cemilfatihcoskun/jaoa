@@ -1,10 +1,9 @@
 package com.sstek.jaoa
 
-import com.sstek.jaoa.utils.xwpfToHtml
+import com.sstek.jaoa.word.utils.xwpfToHtml
 import org.apache.poi.xwpf.usermodel.XWPFDocument
 import org.junit.Test
 import java.io.File
-import java.io.FileOutputStream
 
 class XwpfToHtmlTest {
     @Test

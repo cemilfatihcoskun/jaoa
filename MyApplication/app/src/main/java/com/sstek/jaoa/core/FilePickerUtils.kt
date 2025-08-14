@@ -23,7 +23,7 @@ fun rememberFilePickerLauncher(
         Log.d("FilePickerUtils", "Selected file: $name, Uri: $it")
         context.contentResolver.takePersistableUriPermission(it, Intent.FLAG_GRANT_READ_URI_PERMISSION)
         files.value = files.value + (name to it)
-        val fileType = FileType.fromFileName(it.toString())
+        val fileType = FileType.fromFileName(name)
         onOpenFile(fileType, it)
     }
 }

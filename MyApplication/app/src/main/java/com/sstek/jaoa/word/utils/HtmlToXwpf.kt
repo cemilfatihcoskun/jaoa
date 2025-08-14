@@ -1,13 +1,11 @@
-package com.sstek.jaoa.utils
+package com.sstek.jaoa.word.utils
 
 import android.content.Context
 import android.net.Uri
-import org.apache.poi.util.Units
 import org.apache.poi.xwpf.usermodel.*
 import org.jsoup.Jsoup
 import org.jsoup.nodes.*
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTAbstractNum
-import org.openxmlformats.schemas.wordprocessingml.x2006.main.STHighlightColor
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.STJc
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.STLineSpacingRule
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.STNumberFormat
@@ -172,7 +170,7 @@ fun htmlToXwpf(
                 val pPr = para.ctp.pPr ?: para.ctp.addNewPPr()
                 val spacing = pPr.spacing ?: pPr.addNewSpacing()
                 spacing.line = BigInteger.valueOf((newStyle.lineHeight * 240).toLong())
-                spacing.lineRule = org.openxmlformats.schemas.wordprocessingml.x2006.main.STLineSpacingRule.AUTO
+                spacing.lineRule = STLineSpacingRule.AUTO
 
                 for (child in element.childNodes()) {
                     htmlToXwpf(context, child, document, newStyle, currentNumId, currentIlvl, para)

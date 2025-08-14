@@ -15,6 +15,8 @@
 * Uygulama ana ekranında documents, downloads klasöründeki docx dosyaları listeleniyor.
 * Arkaplan rengi seçilebiliyor.
 * Farklı dosya tiplerine navigasyon edilebiliyor.
+* Docx paylaşılabiliyor.
+* Docx yazdırılabiliyor.
 
 ### Yapılamayanlar
 * Tablo okuma sıkıntılı metinler tablonun dışına taşıyor.
