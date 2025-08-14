@@ -1,15 +1,9 @@
-package com.sstek.jaoa.utils
+package com.sstek.jaoa.word.utils
 
-import org.apache.poi.ooxml.util.POIXMLUnits
-import org.apache.poi.util.Units
 import org.apache.poi.xwpf.usermodel.*
-import org.openxmlformats.schemas.drawingml.x2006.wordprocessingDrawing.CTAnchor
-import org.openxmlformats.schemas.drawingml.x2006.wordprocessingDrawing.CTInline
-import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTRPr
-import java.math.BigDecimal
 import java.math.BigInteger
-import java.math.RoundingMode
 import java.util.Base64
+import kotlin.math.abs
 
 // pt -> px map tablosu
 val ptToPxMap = mapOf(
@@ -33,7 +27,7 @@ val ptToPxMap = mapOf(
 
 // px → en yakın pt karşılığı bulan fonksiyon
 fun pxToClosestPt(px: Int): Int {
-    return ptToPxMap.minByOrNull { kotlin.math.abs(it.value - px) }?.key ?: 12
+    return ptToPxMap.minByOrNull { abs(it.value - px) }?.key ?: 12
 }
 
 // fontFamily → ql-font-jaoa_... formatına dönüştüren fonksiyon

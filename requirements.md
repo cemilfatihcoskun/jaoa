@@ -1,6 +1,6 @@
 # Uygulama Gereksinimleri
 * Uygulama Word, Excel, Powerpoint belgeleri oluşturabilmeli, düzenleyebilmeli ve gösterebilmelidir.
-* Bu kapsamda dosyalar uygulamasından “Birlikte Aç” ile uygulama görünebilmeli ya da uygulama içerisinde belgelerin listesi sunulabilmelidir.
++ Bu kapsamda dosyalar uygulamasından “Birlikte Aç” ile uygulama görünebilmeli ya da uygulama içerisinde belgelerin listesi sunulabilmelidir.
 + Düzenlenen bir belgede üstüne yaz haricinde farklı kaydet seçeneği bulunabilmelidir.
 * Açık olan belge için paylaş kısmında uygulamalar, Bluetooth vs. paylaşımı yapılabilmelidir.
 * Oluşturulan belgeler Internal Storage’de saklanabilmelidir. Bu alandaki dosyaları görmek için kullanıcı isteği ile şifre koruması eklenebilmelidir.

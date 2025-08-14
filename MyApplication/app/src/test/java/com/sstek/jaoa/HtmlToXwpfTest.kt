@@ -1,12 +1,10 @@
 package com.sstek.jaoa
 
-import com.sstek.jaoa.utils.htmlToXwpf
-import com.sstek.jaoa.utils.xwpfToHtml
+import com.sstek.jaoa.word.utils.htmlToXwpf
 import org.apache.poi.xwpf.usermodel.XWPFDocument
 import org.jsoup.Jsoup
 import org.junit.Test
 
-import org.junit.Assert.*
 import java.io.File
 import java.io.FileOutputStream
 

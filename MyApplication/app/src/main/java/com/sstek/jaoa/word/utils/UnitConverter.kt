@@ -1,4 +1,4 @@
-package com.sstek.jaoa.utils
+package com.sstek.jaoa.word.utils
 
 fun emuToPx(emu: Long): Int {
     return ((emu * 96) / 914400).toInt()

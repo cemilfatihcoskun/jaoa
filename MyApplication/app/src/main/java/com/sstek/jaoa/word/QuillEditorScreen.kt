@@ -3,14 +3,19 @@ package com.sstek.jaoa.word
 import android.app.Activity
 import android.net.Uri
 import android.webkit.WebView
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Print
 import androidx.compose.material.icons.filled.Redo
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.SaveAs
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Undo
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -20,6 +25,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.sstek.jaoa.core.getFileName
+import com.sstek.jaoa.word.utils.htmlPrint
+import com.sstek.jaoa.core.shareDocument
 import kotlinx.coroutines.flow.collectLatest
 import org.json.JSONObject
 
@@ -38,6 +46,8 @@ fun QuillEditorScreen(
     var currentPage by remember { mutableStateOf(1) }
     var totalPages by remember { mutableStateOf(1) }
     var pageDropdownExpanded by remember { mutableStateOf(false) }
+
+    val scrollState = rememberScrollState()
 
     // Dosya seçici launcher (Compose ile)
     val filePickerLauncher = rememberLauncherForActivityResult(
@@ -109,8 +119,11 @@ fun QuillEditorScreen(
 
     Column(modifier = Modifier.fillMaxSize()) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(8.dp),
-            verticalAlignment = Alignment.CenterVertically
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(8.dp)
+                .horizontalScroll(scrollState),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             IconButton(onClick = {
                 viewModel.clearSelectedFile()
@@ -135,6 +148,30 @@ fun QuillEditorScreen(
 
             Spacer(modifier = Modifier.width(8.dp))
 
+            Box {
+                Button(onClick = { pageDropdownExpanded = true }) {
+                    Text("$currentPage/$totalPages")
+                }
+                DropdownMenu(
+                    expanded = pageDropdownExpanded,
+                    onDismissRequest = { pageDropdownExpanded = false }
+                ) {
+                    for (i in 1..totalPages) {
+                        DropdownMenuItem(
+                            text = { Text("$i") },
+                            onClick = {
+                                webView?.evaluateJavascript(
+                                    "window.scrollTo(0, ${(i - 1) * 1123});", null
+                                )
+                                pageDropdownExpanded = false
+                            }
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.weight(1f))
+
             IconButton(onClick = {
 
                 if (viewModel.selectedFileUri.value != null) {
@@ -158,29 +195,39 @@ fun QuillEditorScreen(
                 Icon(Icons.Filled.SaveAs, contentDescription = "Farklı Kaydet")
             }
 
-            Spacer(modifier = Modifier.weight(1f))
-
-            Box {
-                Button(onClick = { pageDropdownExpanded = true }) {
-                    Text("$currentPage/$totalPages")
-                }
-                DropdownMenu(
-                    expanded = pageDropdownExpanded,
-                    onDismissRequest = { pageDropdownExpanded = false }
-                ) {
-                    for (i in 1..totalPages) {
-                        DropdownMenuItem(
-                            text = { Text("$i") },
-                            onClick = {
-                                webView?.evaluateJavascript(
-                                    "window.scrollTo(0, ${(i - 1) * 1123});", null
-                                )
-                                pageDropdownExpanded = false
-                            }
-                        )
+            IconButton(onClick = {
+                val uri = viewModel.selectedFileUri.value ?: filePath
+                if (uri != null) {
+                    webView?.let {
+                        htmlPrint(it, context)
+                    } ?: {
+                        Toast.makeText(context, "Doküman hazır değil.", Toast.LENGTH_SHORT).show()
                     }
+
+                } else {
+                    android.widget.Toast.makeText(context, "Henüz dosya kaydedilmedi.", android.widget.Toast.LENGTH_SHORT).show()
                 }
+            }) {
+                Icon(Icons.Default.Print, contentDescription = "Yazdır")
             }
+
+            IconButton(onClick = {
+                val uri = viewModel.selectedFileUri.value ?: filePath
+                if (uri != null) {
+                    shareDocument(
+                        context,
+                        uri,
+                        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                        getFileName(context, uri)
+                    )
+                } else {
+                    android.widget.Toast.makeText(context, "Henüz dosya kaydedilmedi.", android.widget.Toast.LENGTH_SHORT).show()
+                }
+            }) {
+                Icon(Icons.Default.Share, contentDescription = "Paylaş")
+            }
+
+
         }
 
         if (isLoading) {
@@ -206,6 +253,12 @@ fun QuillEditorScreen(
                     settings.domStorageEnabled = true
                     settings.allowFileAccess = true
                     settings.allowContentAccess = true
+
+                    settings.useWideViewPort = true
+                    settings.loadWithOverviewMode = true
+
+                    settings.builtInZoomControls = true
+                    settings.displayZoomControls = false
 
                     webChromeClient = myWebChromeClient
                     webViewClient = QuillWebViewClient {

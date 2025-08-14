@@ -5,8 +5,8 @@ import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.sstek.jaoa.utils.convertHtmlToXwpf
-import com.sstek.jaoa.utils.xwpfToHtml
+import com.sstek.jaoa.word.utils.convertHtmlToXwpf
+import com.sstek.jaoa.word.utils.xwpfToHtml
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow

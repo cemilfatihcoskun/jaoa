@@ -97,8 +97,20 @@ class MainActivity : ComponentActivity() {
     @androidx.compose.runtime.Composable
     private fun HandleIntentUri(uri: Uri, navController: NavHostController, viewModel: IntentViewModel) {
         LaunchedEffect(uri) {
-            val encodedUri = Uri.encode(uri.toString())
-            navController.navigate("editor/$encodedUri")
+            val path = uri.path ?: ""
+            when {
+                path.endsWith(".docx") -> {
+                    val encodedUri = Uri.encode(uri.toString())
+                    navController.navigate("word/$encodedUri")
+                }
+                path.endsWith(".xlsx") -> {
+                    val encodedUri = Uri.encode(uri.toString())
+                    navController.navigate("excel/$encodedUri")
+                }
+                else -> {
+                    viewModel.showToast("Desteklenmeyen dosya formatı")
+                }
+            }
             viewModel.clearIntentUri()
         }
     }
