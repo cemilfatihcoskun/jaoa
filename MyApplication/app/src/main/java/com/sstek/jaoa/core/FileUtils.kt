@@ -21,7 +21,13 @@ fun getDocxFilesWithFileApi(context: Context, extensions: List<FileType>): List<
             storageDir?.takeIf { it.exists() }?.let { dir ->
                 Log.d("FileUtils", "Scanning storage: ${dir.absolutePath}")
                 dir.walkTopDown().forEach { file ->
-                    if (file.isFile && extensions.any { ext -> file.name.endsWith(".${ext.extension}", ignoreCase = true) }) {
+                    // Çöp kutusunu filtrele
+                    if (file.isFile &&
+                        extensions.any { ext -> file.name.endsWith(".${ext.extension}", ignoreCase = true) } &&
+                        !file.absolutePath.contains("/.Trash") &&
+                        !file.absolutePath.contains("/.Trash-") &&
+                        !file.absolutePath.contains("/.local/share/Trash")
+                    ) {
                         docxList += Triple(file.name, Uri.fromFile(file), file.absolutePath)
                     }
                 }
@@ -37,7 +43,12 @@ fun getDocxFilesWithFileApi(context: Context, extensions: List<FileType>): List<
             if (dir.exists()) {
                 Log.d("FileUtils", "Scanning extra dir: ${dir.absolutePath}")
                 dir.walkTopDown().forEach { file ->
-                    if (file.isFile && extensions.any { ext -> file.name.endsWith(".${ext.extension}", ignoreCase = true) }) {
+                    if (file.isFile &&
+                        extensions.any { ext -> file.name.endsWith(".${ext.extension}", ignoreCase = true) } &&
+                        !file.absolutePath.contains("/.Trash") &&
+                        !file.absolutePath.contains("/.Trash-") &&
+                        !file.absolutePath.contains("/.local/share/Trash")
+                    ) {
                         docxList += Triple(file.name, Uri.fromFile(file), file.absolutePath)
                     }
                 }
