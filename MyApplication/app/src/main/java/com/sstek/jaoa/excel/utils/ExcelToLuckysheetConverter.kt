@@ -78,7 +78,9 @@ class ExcelToLuckysheetConverter {
         for (col in 0..maxCol) {
             val width = sheet.getColumnWidth(col)
             if (width != sheet.defaultColumnWidth) {
-                columnWidths[col.toString()] = (width / 256.0 * 8).toInt()
+                val luckysheetWidth = (width / 256.0).toInt()
+                columnWidths[col.toString()] = maxOf(luckysheetWidth, 73) // Minimum 73 piksel
+                Log.d(TAG, "Column $col: Excel width=$width, Luckysheet width=$luckysheetWidth")
             }
         }
 
@@ -282,36 +284,215 @@ class ExcelToLuckysheetConverter {
 
     private fun extractFontColor(font: XSSFFont?): String? {
         return try {
-            val color = font?.xssfColor
-            if (color != null && color.rgb != null) {
-                "#" + color.rgb.joinToString("") {
-                    String.format("%02x", it.toInt() and 0xFF)
-                }.uppercase()
-            } else {
-                null
+            if (font == null) return "#000000"
+
+            Log.d(TAG, "Extracting font color...")
+
+            // Method 1: XSSFColor'dan RGB almaya çalış (Reflection ile güvenli)
+            try {
+                val xssfColor = font.xssfColor
+                if (xssfColor != null) {
+                    // Reflection ile getRGB metodunu çağır
+                    val getRGBMethod = xssfColor.javaClass.getMethod("getRGB")
+                    val rgbArray = getRGBMethod.invoke(xssfColor) as? ByteArray
+
+                    if (rgbArray != null && rgbArray.size >= 3) {
+                        val r = rgbArray[0].toInt() and 0xFF
+                        val g = rgbArray[1].toInt() and 0xFF
+                        val b = rgbArray[2].toInt() and 0xFF
+
+                        val hexColor = String.format("#%02X%02X%02X", r, g, b)
+                        Log.d(TAG, "Font RGB color: $hexColor")
+                        return hexColor
+                    }
+
+                    // Alternatif: getARGB metodunu dene
+                    try {
+                        val getARGBMethod = xssfColor.javaClass.getMethod("getARGB")
+                        val argbArray = getARGBMethod.invoke(xssfColor) as? ByteArray
+
+                        if (argbArray != null && argbArray.size >= 4) {
+                            val r = argbArray[1].toInt() and 0xFF
+                            val g = argbArray[2].toInt() and 0xFF
+                            val b = argbArray[3].toInt() and 0xFF
+
+                            val hexColor = String.format("#%02X%02X%02X", r, g, b)
+                            Log.d(TAG, "Font ARGB color: $hexColor")
+                            return hexColor
+                        }
+                    } catch (e: Exception) {
+                        Log.d(TAG, "ARGB method failed: ${e.message}")
+                    }
+                }
+            } catch (e: Exception) {
+                Log.d(TAG, "XSSFColor RGB extraction failed: ${e.message}")
             }
+
+            // Method 2: Color index fallback - Genişletilmiş renk paleti
+            val colorIndex = try {
+                font.color.toInt()
+            } catch (e: Exception) {
+                0
+            }
+
+            val indexColor = getColorFromIndex(colorIndex)
+            if (indexColor != null) {
+                Log.d(TAG, "Font index color: index=$colorIndex, color=$indexColor")
+                return indexColor
+            }
+
+            // Default siyah
+            return "#000000"
+
         } catch (e: Exception) {
-            null
+            Log.w(TAG, "Font color extraction failed: ${e.message}")
+            return "#000000"
         }
     }
 
     private fun extractBackgroundColor(cellStyle: XSSFCellStyle?): String? {
         return try {
-            val fillPattern = cellStyle?.fillPattern
+            if (cellStyle == null) return null
+
+            val fillPattern = cellStyle.fillPattern
             if (fillPattern == FillPatternType.SOLID_FOREGROUND) {
-                val color = cellStyle.fillForegroundColorColor as? XSSFColor
-                if (color?.rgb != null) {
-                    "#" + color.rgb.joinToString("") {
-                        String.format("%02x", it.toInt() and 0xFF)
-                    }.uppercase()
-                } else {
+
+                Log.d(TAG, "Extracting background color...")
+
+                // Method 1: XSSFColor'dan RGB almaya çalış
+                try {
+                    val xssfColor = cellStyle.fillForegroundColorColor as? XSSFColor
+                    if (xssfColor != null) {
+                        // Reflection ile getRGB metodunu çağır
+                        val getRGBMethod = xssfColor.javaClass.getMethod("getRGB")
+                        val rgbArray = getRGBMethod.invoke(xssfColor) as? ByteArray
+
+                        if (rgbArray != null && rgbArray.size >= 3) {
+                            val r = rgbArray[0].toInt() and 0xFF
+                            val g = rgbArray[1].toInt() and 0xFF
+                            val b = rgbArray[2].toInt() and 0xFF
+
+                            // Beyaz değilse döndür
+                            if (!(r == 255 && g == 255 && b == 255)) {
+                                val hexColor = String.format("#%02X%02X%02X", r, g, b)
+                                Log.d(TAG, "Background RGB color: $hexColor")
+                                return hexColor
+                            }
+                        }
+
+                        // Alternatif: getARGB metodunu dene
+                        try {
+                            val getARGBMethod = xssfColor.javaClass.getMethod("getARGB")
+                            val argbArray = getARGBMethod.invoke(xssfColor) as? ByteArray
+
+                            if (argbArray != null && argbArray.size >= 4) {
+                                val r = argbArray[1].toInt() and 0xFF
+                                val g = argbArray[2].toInt() and 0xFF
+                                val b = argbArray[3].toInt() and 0xFF
+
+                                if (!(r == 255 && g == 255 && b == 255)) {
+                                    val hexColor = String.format("#%02X%02X%02X", r, g, b)
+                                    Log.d(TAG, "Background ARGB color: $hexColor")
+                                    return hexColor
+                                }
+                            }
+                        } catch (e: Exception) {
+                            Log.d(TAG, "Background ARGB failed: ${e.message}")
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.d(TAG, "XSSFColor background extraction failed: ${e.message}")
+                }
+
+                // Method 2: Color index fallback
+                val colorIndex = try {
+                    cellStyle.fillForegroundColor.toInt()
+                } catch (e: Exception) {
                     null
                 }
-            } else {
-                null
+
+                if (colorIndex != null) {
+                    val indexColor = getColorFromIndex(colorIndex)
+                    if (indexColor != null && indexColor != "#FFFFFF") {
+                        Log.d(TAG, "Background index color: index=$colorIndex, color=$indexColor")
+                        return indexColor
+                    }
+                }
             }
+
+            return null
+
         } catch (e: Exception) {
-            null
+            Log.w(TAG, "Background color extraction failed: ${e.message}")
+            return null
+        }
+    }
+
+
+    private fun getColorFromIndex(colorIndex: Int): String? {
+        return when (colorIndex) {
+            // Temel renkler
+            0 -> "#000000"   // Auto/Black
+            1 -> "#000000"   // Black
+            2 -> "#FFFFFF"   // White
+            3 -> "#FF0000"   // Red
+            4 -> "#00FF00"   // Green
+            5 -> "#0000FF"   // Blue
+            6 -> "#FFFF00"   // Yellow
+            7 -> "#FF00FF"   // Magenta
+            8 -> "#000000"   // Cyan
+            9 -> "#800000"   // Dark Red
+            10 -> "#008000"  // Dark Green
+            11 -> "#000080"  // Dark Blue
+            12 -> "#808000"  // Olive
+            13 -> "#800080"  // Purple
+            14 -> "#008080"  // Teal
+            15 -> "#C0C0C0"  // Silver
+            16 -> "#808080"  // Gray
+
+            // Excel 2007+ tema renkleri
+            17 -> "#9999FF"  // Light Blue
+            18 -> "#993366"  // Dark Pink
+            19 -> "#FFFFCC"  // Light Yellow
+            20 -> "#CCFFFF"  // Light Cyan
+            21 -> "#660066"  // Dark Purple
+            22 -> "#FF8080"  // Light Red
+            23 -> "#0066CC"  // Medium Blue
+            24 -> "#CCCCFF"  // Very Light Blue
+            25 -> "#000080"  // Navy Blue
+            26 -> "#FF0000"  // Red Accent
+            27 -> "#00B050"  // Green Accent
+            28 -> "#0070C0"  // Blue Accent
+            29 -> "#FFC000"  // Orange Accent
+            30 -> "#7030A0"  // Purple Accent
+            31 -> "#C5504B"  // Dark Red Accent
+            32 -> "#4BACC6"  // Light Blue Accent
+            33 -> "#9BBB59"  // Light Green Accent
+            34 -> "#F79646"  // Orange
+            35 -> "#8064A2"  // Lavender
+            36 -> "#4F81BD"  // Steel Blue
+            37 -> "#B2DF8A"  // Pale Green
+            38 -> "#FFCCCC"  // Light Pink
+            39 -> "#D9D9D9"  // Light Gray
+            40 -> "#A6A6A6"  // Medium Gray
+
+            // Ek renkler (gerekirse genişletilebilir)
+            41 -> "#FFFF99"  // Pale Yellow
+            42 -> "#99CCFF"  // Sky Blue
+            43 -> "#FF9999"  // Rose
+            44 -> "#99FF99"  // Light Green
+            45 -> "#FFCC99"  // Peach
+            46 -> "#CC99FF"  // Light Purple
+            47 -> "#FF6666"  // Salmon
+            48 -> "#66CCFF"  // Light Sky Blue
+            49 -> "#66FF66"  // Bright Green
+            50 -> "#FFFF66"  // Bright Yellow
+
+            // Automatic/Default
+            64 -> "#000000"  // System foreground
+            65 -> "#FFFFFF"  // System background
+
+            else -> null
         }
     }
 
@@ -332,4 +513,5 @@ class ExcelToLuckysheetConverter {
             else -> null
         }
     }
+
 }
