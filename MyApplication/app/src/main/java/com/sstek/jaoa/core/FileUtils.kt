@@ -7,6 +7,16 @@ import android.os.Environment
 import android.provider.MediaStore
 import android.util.Log
 import android.widget.Toast
+import java.io.File
+
+fun isNotTrashed(file: File): Boolean {
+    val path = file.absolutePath.lowercase()
+    val name = file.name.lowercase()
+    return !path.contains("/.trash") &&
+            !path.contains("/.local/share/trash") &&
+            !name.startsWith(".trashed")
+}
+
 
 fun getDocxFilesWithFileApi(context: Context, extensions: List<FileType>): List<Pair<String, Uri>> {
     val docxList = mutableListOf<Triple<String, Uri, String>>()
@@ -24,9 +34,7 @@ fun getDocxFilesWithFileApi(context: Context, extensions: List<FileType>): List<
                     // Çöp kutusunu filtrele
                     if (file.isFile &&
                         extensions.any { ext -> file.name.endsWith(".${ext.extension}", ignoreCase = true) } &&
-                        !file.absolutePath.contains("/.Trash") &&
-                        !file.absolutePath.contains("/.Trash-") &&
-                        !file.absolutePath.contains("/.local/share/Trash")
+                        isNotTrashed(file)
                     ) {
                         docxList += Triple(file.name, Uri.fromFile(file), file.absolutePath)
                     }
