@@ -53,9 +53,7 @@ fun getDocxFilesWithFileApi(context: Context, extensions: List<FileType>): List<
                 dir.walkTopDown().forEach { file ->
                     if (file.isFile &&
                         extensions.any { ext -> file.name.endsWith(".${ext.extension}", ignoreCase = true) } &&
-                        !file.absolutePath.contains("/.Trash") &&
-                        !file.absolutePath.contains("/.Trash-") &&
-                        !file.absolutePath.contains("/.local/share/Trash")
+                        isNotTrashed(file)
                     ) {
                         docxList += Triple(file.name, Uri.fromFile(file), file.absolutePath)
                     }
