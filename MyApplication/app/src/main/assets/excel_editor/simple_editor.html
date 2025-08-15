@@ -97,12 +97,12 @@
         // ECharts mock - CDN hatasını önler
         window.echarts = {
             init: function(dom, theme, opts) {
-                console.log('📊 ECharts mock init called');
+
                 return {
-                    setOption: function(option) { console.log('📊 ECharts setOption mock'); },
-                    resize: function() { console.log('📊 ECharts resize mock'); },
-                    dispose: function() { console.log('📊 ECharts dispose mock'); },
-                    clear: function() { console.log('📊 ECharts clear mock'); },
+                    setOption: function(option) {  },
+                    resize: function() { },
+                    dispose: function() {  },
+                    clear: function() {  },
                     getWidth: function() { return 400; },
                     getHeight: function() { return 300; },
                     on: function() {},
@@ -124,19 +124,17 @@
             version: '1.0.0-mock'
         };
 
-        console.log('✅ CDN mock\'ları yüklendi');
     </script>
 
-    <!-- ✅ DOĞRU SIRA: 1. plugin.js -->
+
     <script src="./plugins/js/plugin.js"></script>
 
-    <!-- ✅ DOĞRU SIRA: 2. luckysheet.umd.js -->
     <script src="./luckysheet.umd.js"></script>
 
 </head>
 
 <body>
-<div id="luckysheet" style="margin:0px;padding:0px;position:absolute;height: 500px; width: 500px;left: 0px;top: 0px;"></div>
+<div id="luckysheet" style="margin:0px;padding:0px;position:absolute;height: 500px; width: 350px;left: 0px;top: 0px;"></div>
 <!-- demo feature, non-production use -->
 <script src="./demoData/demoFeature.js"></script>
 <script src="./demoData/sheetFormula.js"></script>
@@ -152,10 +150,8 @@
 <script src="./demoData/sheetDataVerification.js"></script>
 
 <script>
-    // ✅ ORİJİNAL KOD - Canvas render fix eklendi
 
     $(function () {
-        console.log('📄 jQuery ready - Luckysheet başlatılıyor...');
 
         // According to the browser language
         var lang = luckysheetDemoUtil.language() === 'zh' ? 'zh' : 'en';
@@ -282,7 +278,7 @@
                         console.log('🎉 === LUCKYSHEET BAŞARIYLA YÜKLENDİ ===');
                         console.log('📊 Sheets loaded:', json?.length || 0);
 
-                        // ✅ ZORLA CANVAS RENDER FIX - DETAYLI
+
                         setTimeout(() => {
                             try {
                                 console.log('🔧 ===== DETAYLI CANVAS DEBUG =====');
@@ -406,6 +402,68 @@
                         window.ExcelEditorAPI = {
                             isReady: () => true,
                             getInstance: () => luckysheet,
+                            loadData: function(jsonString) {
+                        try {
+                            console.log('📥 Loading data into Luckysheet...');
+                            console.log('📊 Data size:', jsonString.length, 'characters');
+
+                            const data = JSON.parse(jsonString);
+                            console.log('📋 Parsed data:', data);
+
+                            // Data validation
+                            if (!Array.isArray(data) || data.length === 0) {
+                                console.error('❌ Invalid data format');
+                                return false;
+                            }
+
+                            // Luckysheet'i yeniden başlat
+                            if (typeof luckysheet.destroy === 'function') {
+                                luckysheet.destroy();
+                                console.log('🔄 Previous instance destroyed');
+                            }
+
+                            // Yeni seçenekler
+                            const newOptions = {
+                                container: 'luckysheet',
+                                lang: 'en',
+                                data: data,
+                                forceCalculation: false,
+                                plugins: [],
+                                fontList: [
+                                    {
+                                        "fontName":"Arial",
+                                        "url":"./assets/iconfont/Arial.ttf"
+                                    }
+                                ],
+                                hook: {
+                                    workbookCreateAfter: function(newJson) {
+                                        console.log('✅ Data loaded successfully into Luckysheet');
+                                        console.log('📊 New sheets count:', newJson?.length || 0);
+
+                                        // Android'e başarı bildir
+                                        if (window.AndroidInterface && window.AndroidInterface.log) {
+                                            window.AndroidInterface.log('✅ Data loaded successfully');
+                                        }
+                                    },
+                                    cellUpdated: function(r, c, oldValue, newValue, isRefresh) {
+                                        // Hücre güncellendiğinde
+                                        console.log('📱 Cell updated:', r, c, oldValue, '=>', newValue);
+                                    }
+                                }
+                            };
+
+                            // Yeniden oluştur
+                            luckysheet.create(newOptions);
+
+                            return true;
+                        } catch (e) {
+                            console.error('❌ Load data error:', e);
+                            if (window.AndroidInterface && window.AndroidInterface.log) {
+                                window.AndroidInterface.log('❌ LoadData error: ' + e.message);
+                            }
+                            return false;
+                        }
+                    },
                             getData: () => {
                                 try {
                                     return JSON.stringify({
@@ -438,18 +496,34 @@
                         if (window.AndroidInterface && window.AndroidInterface.updateStatus) {
                             window.AndroidInterface.updateStatus('✅ Excel Editor Hazır! (success)');
                         }
+                           // Android'e hazır olduğunu bildir
+        if (window.AndroidInterface && window.AndroidInterface.onEditorReady) {
+        console.log('📱 Notifying Android - Editor is ready');
+        window.AndroidInterface.onEditorReady();
+        } else {
+        console.warn('⚠️ AndroidInterface.onEditorReady not found');
+        }
                     },
                     rangePasteBefore:function(range,data){
                         // console.info('rangePasteBefore',range,data)
                         // return false; //Can intercept paste
                     }
                 },
-                data:
-                [sheetCell,sheetFormula,sheetConditionFormat,sheetSparkline,sheetTable,sheetComment,sheetPivotTableData,sheetPivotTable,sheetChart,sheetPicture,sheetDataVerification]
+                data:[{
+            "name": "Sheet1",
+            "index": 0,
+            "celldata": [], // ✅ Boş hücreler
+            "row": 100,
+            "column": 26,
+            "config": null,
+            "status": 1,
+            "order": 0,
+            "hide": 0,
+            "zoomRatio": 1.0
+        }]
+                //[sheetCell,sheetFormula,sheetConditionFormat,sheetSparkline,sheetTable,sheetComment,sheetPivotTableData,sheetPivotTable,sheetChart,sheetPicture,sheetDataVerification]
             }
         }
-
-        console.log('🚀 luckysheet.create() çağrılıyor...');
         luckysheet.create(options);
 
     })
