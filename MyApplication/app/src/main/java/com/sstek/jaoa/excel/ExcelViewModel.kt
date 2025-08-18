@@ -180,8 +180,6 @@ class ExcelViewModel(application: Application) : AndroidViewModel(application) {
                         .replace("\\\"", "\"")
                         .replace("\\\\", "\\")
 
-                    Log.d("ExcelViewModel", "Clean result length: ${cleanResult.length}")
-
                     if (!cleanResult.startsWith("{") || !cleanResult.endsWith("}")) {
                         _toastMessage.emit("Geçersiz veri formatı")
                         return@launch

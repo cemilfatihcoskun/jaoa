@@ -43,13 +43,10 @@ class ExcelToLuckysheetConverter {
         var maxRow = 0
         var maxCol = 0
 
-        // Process all rows and cells
         for (row in sheet) {
             maxRow = maxOf(maxRow, row.rowNum)
-
             for (cell in row) {
                 maxCol = maxOf(maxCol, cell.columnIndex)
-
                 val luckysheetCell = convertCell(cell)
                 if (luckysheetCell != null) {
                     cellData.add(luckysheetCell)
@@ -57,43 +54,39 @@ class ExcelToLuckysheetConverter {
             }
         }
 
-        // Process merged regions
-        val mergedRanges = mutableListOf<LuckysheetMerge>()
+        // ✅ OBJECT formatında merge oluştur (Luckysheet'in beklediği format)
+        val mergeObject = mutableMapOf<String, Map<String, Int>>()
         for (mergedRegion in sheet.mergedRegions) {
-            mergedRanges.add(
-                LuckysheetMerge(
-                    r = mergedRegion.firstRow,
-                    c = mergedRegion.firstColumn,
-                    rs = mergedRegion.lastRow - mergedRegion.firstRow + 1,
-                    cs = mergedRegion.lastColumn - mergedRegion.firstColumn + 1
-                )
+            val key = "${mergedRegion.firstRow}_${mergedRegion.firstColumn}"
+            mergeObject[key] = mapOf(
+                "r" to mergedRegion.firstRow,
+                "c" to mergedRegion.firstColumn,
+                "rs" to (mergedRegion.lastRow - mergedRegion.firstRow + 1),
+                "cs" to (mergedRegion.lastColumn - mergedRegion.firstColumn + 1)
             )
         }
 
-        // Process column widths and row heights
-        val columnWidths = mutableMapOf<String, Int>()
-        val rowHeights = mutableMapOf<String, Int>()
+        val columnWidths = mutableMapOf<String, Double>()
+        val rowHeights = mutableMapOf<String, Double>()
 
-        // Get custom column widths
         for (col in 0..maxCol) {
             val width = sheet.getColumnWidth(col)
             if (width != sheet.defaultColumnWidth) {
-                val luckysheetWidth = (width / 256.0).toInt()
-                columnWidths[col.toString()] = maxOf(luckysheetWidth, 73) // Minimum 73 piksel
-                Log.d(TAG, "Column $col: Excel width=$width, Luckysheet width=$luckysheetWidth")
+                val luckysheetWidth = (width / 256.0)
+                columnWidths[col.toString()] = maxOf(luckysheetWidth, 73.0)
             }
         }
 
-        // Get custom row heights
         for (rowNum in 0..maxRow) {
             val row = sheet.getRow(rowNum)
             if (row != null && row.height != sheet.defaultRowHeight) {
-                rowHeights[rowNum.toString()] = (row.height / 20).toInt()
+                val luckysheetHeight = (row.height / 20.0)
+                rowHeights[rowNum.toString()] = luckysheetHeight
             }
         }
 
         val config = LuckysheetConfig(
-            merge = if (mergedRanges.isNotEmpty()) mergedRanges else null,
+            merge = if (mergeObject.isNotEmpty()) mergeObject else null, // ✅ Object formatı
             columnlen = if (columnWidths.isNotEmpty()) columnWidths else null,
             rowlen = if (rowHeights.isNotEmpty()) rowHeights else null
         )
@@ -104,7 +97,7 @@ class ExcelToLuckysheetConverter {
             celldata = if (cellData.isNotEmpty()) cellData else null,
             row = maxOf(maxRow + 1, LuckysheetConstants.DEFAULT_ROW_COUNT),
             column = maxOf(maxCol + 1, LuckysheetConstants.DEFAULT_COLUMN_COUNT),
-            config = if (mergedRanges.isNotEmpty() || columnWidths.isNotEmpty() || rowHeights.isNotEmpty()) config else null
+            config = if (mergeObject.isNotEmpty() || columnWidths.isNotEmpty() || rowHeights.isNotEmpty()) config else null
         )
     }
 
@@ -115,12 +108,31 @@ class ExcelToLuckysheetConverter {
             val cellValue = extractCellValue(xssfCell)
             val displayValue = extractDisplayValue(xssfCell)
 
-            // Skip empty cells
-            if (cellValue == null && !hasFormula(xssfCell)) {
+            val cellStyle = xssfCell.cellStyle
+
+
+            val hasBackground = try {
+                cellStyle.fillPattern == FillPatternType.SOLID_FOREGROUND &&
+                        cellStyle.fillForegroundColor != IndexedColors.AUTOMATIC.index
+            } catch (e: Exception) {
+                false
+            }
+
+
+            val hasBorder = try {
+                cellStyle.borderBottom != BorderStyle.NONE ||
+                        cellStyle.borderTop != BorderStyle.NONE ||
+                        cellStyle.borderLeft != BorderStyle.NONE ||
+                        cellStyle.borderRight != BorderStyle.NONE
+            } catch (e: Exception) {
+                false
+            }
+
+            // Skip empty cells ONLY if no value, no formula, no background, AND no border
+            if (cellValue == null && !hasFormula(xssfCell) && !hasBackground && !hasBorder) {
                 return null
             }
 
-            val cellStyle = xssfCell.cellStyle
             val font = xssfCell.sheet.workbook.getFontAt(cellStyle.fontIndexAsInt)
 
             val luckysheetValue = LuckysheetCellValue(
@@ -129,7 +141,7 @@ class ExcelToLuckysheetConverter {
                 f = getFormulaSafely(xssfCell),
                 ct = getLuckysheetCellType(xssfCell),
 
-                // Font properties
+
                 ff = font.fontName ?: "Arial",
                 fs = font.fontHeightInPoints.toInt().takeIf { it > 0 } ?: 11,
                 fc = extractFontColor(font as? XSSFFont),
@@ -137,7 +149,7 @@ class ExcelToLuckysheetConverter {
                 it = if (font.italic) 1 else 0,
                 cl = if (font.underline != Font.U_NONE) 1 else 0,
 
-                // Cell properties
+
                 bg = extractBackgroundColor(cellStyle as? XSSFCellStyle),
                 ht = getHorizontalAlignment(cellStyle.alignment),
                 vt = getVerticalAlignment(cellStyle.verticalAlignment)
@@ -154,6 +166,7 @@ class ExcelToLuckysheetConverter {
             return null
         }
     }
+
 
     private fun hasFormula(cell: XSSFCell): Boolean {
         return try {
@@ -180,11 +193,11 @@ class ExcelToLuckysheetConverter {
             CellType.STRING -> cell.stringCellValue
             CellType.NUMERIC -> {
                 if (DateUtil.isCellDateFormatted(cell)) {
-                    // Format date as string for Luckysheet
+
                     SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(cell.dateCellValue)
                 } else {
                     val numValue = cell.numericCellValue
-                    // Return integer if it's a whole number
+
                     if (numValue == numValue.toLong().toDouble()) {
                         numValue.toLong()
                     } else {
@@ -223,7 +236,7 @@ class ExcelToLuckysheetConverter {
         return try {
             val dataFormatter = DataFormatter()
             val displayValue = dataFormatter.formatCellValue(cell)
-            // Control karakterleri temizle
+
             displayValue.takeIf { it.isNotBlank() }?.let { cleanControlCharacters(it) }
         } catch (e: Exception) {
             extractCellValue(cell)?.toString()?.let { cleanControlCharacters(it) }
@@ -431,7 +444,6 @@ class ExcelToLuckysheetConverter {
 
     private fun getColorFromIndex(colorIndex: Int): String? {
         return when (colorIndex) {
-            // Temel renkler
             0 -> "#000000"   // Auto/Black
             1 -> "#000000"   // Black
             2 -> "#FFFFFF"   // White
@@ -449,8 +461,6 @@ class ExcelToLuckysheetConverter {
             14 -> "#008080"  // Teal
             15 -> "#C0C0C0"  // Silver
             16 -> "#808080"  // Gray
-
-            // Excel 2007+ tema renkleri
             17 -> "#9999FF"  // Light Blue
             18 -> "#993366"  // Dark Pink
             19 -> "#FFFFCC"  // Light Yellow
@@ -475,8 +485,6 @@ class ExcelToLuckysheetConverter {
             38 -> "#FFCCCC"  // Light Pink
             39 -> "#D9D9D9"  // Light Gray
             40 -> "#A6A6A6"  // Medium Gray
-
-            // Ek renkler (gerekirse genişletilebilir)
             41 -> "#FFFF99"  // Pale Yellow
             42 -> "#99CCFF"  // Sky Blue
             43 -> "#FF9999"  // Rose
@@ -487,11 +495,8 @@ class ExcelToLuckysheetConverter {
             48 -> "#66CCFF"  // Light Sky Blue
             49 -> "#66FF66"  // Bright Green
             50 -> "#FFFF66"  // Bright Yellow
-
-            // Automatic/Default
             64 -> "#000000"  // System foreground
             65 -> "#FFFFFF"  // System background
-
             else -> null
         }
     }

@@ -44,54 +44,102 @@ class LuckysheetToExcelConverter {
 
     private fun convertSheet(workbook: XSSFWorkbook, sheetData: LuckysheetSheet) {
         val sheet = workbook.createSheet(sheetData.name)
-
-        // Create cell styles cache to avoid creating duplicates
         val styleCache = mutableMapOf<String, XSSFCellStyle>()
 
-        // Process cell data
         sheetData.celldata?.forEach { cellInfo ->
             convertCell(sheet, cellInfo, styleCache)
         }
 
-        // Process merged regions
-        sheetData.config?.merge?.forEach { mergeInfo ->
-            try {
-                val cellRangeAddress = CellRangeAddress(
-                    mergeInfo.r,
-                    mergeInfo.r + mergeInfo.rs - 1,
-                    mergeInfo.c,
-                    mergeInfo.c + mergeInfo.cs - 1
-                )
-                sheet.addMergedRegion(cellRangeAddress)
-            } catch (e: Exception) {
-                Log.w(TAG, "Could not add merged region: $mergeInfo", e)
+        // ✅ Merge işlemi - hem object hem array formatını handle et
+        try {
+            val mergedRanges = parseMergeFromConfig(sheetData.config)
+            mergedRanges.forEach { mergeInfo ->
+                try {
+                    val cellRangeAddress = CellRangeAddress(
+                        mergeInfo.r,
+                        mergeInfo.r + mergeInfo.rs - 1,
+                        mergeInfo.c,
+                        mergeInfo.c + mergeInfo.cs - 1
+                    )
+                    sheet.addMergedRegion(cellRangeAddress)
+                } catch (e: Exception) {
+                    Log.w(TAG, "Could not add merged region: $mergeInfo", e)
+                }
             }
+        } catch (e: Exception) {
+            Log.w(TAG, "Error processing merge data", e)
         }
 
-        // Set column widths
+        // Column widths
         sheetData.config?.columnlen?.forEach { (colIndex, width) ->
             try {
                 val col = colIndex.toIntOrNull()
                 if (col != null && width > 0) {
-                    sheet.setColumnWidth(col, width * 256)
+                    val excelWidth = (width * 256).toInt()
+                    sheet.setColumnWidth(col, excelWidth)
                 }
             } catch (e: Exception) {
                 Log.w(TAG, "Could not set column width for column $colIndex", e)
             }
         }
 
-        // Set row heights
+        // Row heights
         sheetData.config?.rowlen?.forEach { (rowIndex, height) ->
             try {
                 val rowNum = rowIndex.toIntOrNull()
                 if (rowNum != null && height > 0) {
                     val row = sheet.getRow(rowNum) ?: sheet.createRow(rowNum)
-                    row.height = (height * 20).toShort()
+                    val excelHeight = (height * 20).toInt().toShort()
+                    row.height = excelHeight
                 }
             } catch (e: Exception) {
                 Log.w(TAG, "Could not set row height for row $rowIndex", e)
             }
         }
+    }
+
+    private fun parseMergeFromConfig(config: LuckysheetConfig?): List<LuckysheetMerge> {
+        if (config?.merge == null) return emptyList()
+
+        val mergeList = mutableListOf<LuckysheetMerge>()
+
+        try {
+            val mergeJson = gson.toJsonTree(config.merge)
+
+            when {
+                mergeJson.isJsonArray -> {
+                    // Array format: [{"r":0,"c":0,"rs":2,"cs":2}]
+                    mergeJson.asJsonArray.forEach { element ->
+                        val obj = element.asJsonObject
+                        mergeList.add(LuckysheetMerge(
+                            r = obj.get("r")?.asInt ?: 0,
+                            c = obj.get("c")?.asInt ?: 0,
+                            rs = obj.get("rs")?.asInt ?: 1,
+                            cs = obj.get("cs")?.asInt ?: 1
+                        ))
+                    }
+                }
+                mergeJson.isJsonObject -> {
+                    // Object format: {"0_0":{"r":0,"c":0,"rs":2,"cs":2}}
+                    mergeJson.asJsonObject.entrySet().forEach { entry ->
+                        val obj = entry.value.asJsonObject
+                        mergeList.add(LuckysheetMerge(
+                            r = obj.get("r")?.asInt ?: 0,
+                            c = obj.get("c")?.asInt ?: 0,
+                            rs = obj.get("rs")?.asInt ?: 1,
+                            cs = obj.get("cs")?.asInt ?: 1
+                        ))
+                    }
+                }
+            }
+
+            Log.d(TAG, "Parsed ${mergeList.size} merge ranges from ${if (mergeJson.isJsonArray) "array" else "object"} format")
+
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not parse merge data: ${e.message}")
+        }
+
+        return mergeList
     }
 
     private fun convertCell(
@@ -129,11 +177,11 @@ class LuckysheetToExcelConverter {
             }
         }
 
-        // Set the raw value
+
         when (val value = cellValue.v) {
             is String -> {
                 if (value.isNotBlank()) {
-                    // Check if it's a date string
+
                     if (isDateString(value)) {
                         try {
                             val date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(value)
@@ -169,21 +217,15 @@ class LuckysheetToExcelConverter {
         cellValue: LuckysheetCellValue,
         styleCache: MutableMap<String, XSSFCellStyle>
     ): XSSFCellStyle? {
-        // Create a style key based on the cell properties
+
         val styleKey = createStyleKey(cellValue)
-
-        // Return cached style if exists
         styleCache[styleKey]?.let { return it }
-
-        // Check if any styling is needed
         if (!hasStyleProperties(cellValue)) {
             return null
         }
 
         val style = workbook.createCellStyle()
         val font = workbook.createFont()
-
-        // Font properties
         cellValue.ff?.let { font.fontName = it }
         cellValue.fs?.let { fontSize ->
             if (fontSize > 0) {
@@ -201,7 +243,6 @@ class LuckysheetToExcelConverter {
             }
         }
 
-        // Font styling
         if (cellValue.bl == 1) font.bold = true
         if (cellValue.it == 1) font.italic = true
         if (cellValue.cl == 1) font.underline = Font.U_SINGLE

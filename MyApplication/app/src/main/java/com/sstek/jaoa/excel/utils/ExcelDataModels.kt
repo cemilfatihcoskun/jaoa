@@ -1,10 +1,5 @@
 package com.sstek.jaoa.excel.utils
 
-/**
- * Data models for Luckysheet JSON format
- * These models represent the structure that Luckysheet expects/returns
- */
-
 data class LuckysheetWorkbook(
     val sheets: List<LuckysheetSheet>,
     val title: String = "Excel Workbook"
@@ -51,7 +46,7 @@ data class LuckysheetCellValue(
     val tb: String? = null,         // text break
     val f: String? = null,          // formula
     val spl: Any? = null,           // split info
-    val rt: List<LuckysheetRichText>? = null  // rich text
+    val rt: List<LuckysheetRichText>? = null,  // rich text
 )
 
 data class LuckysheetCellType(
@@ -71,14 +66,14 @@ data class LuckysheetRichText(
 )
 
 data class LuckysheetConfig(
-    val merge: List<LuckysheetMerge>? = null,
+    val merge: Any? = null,  // ✅ List yerine Any - hem object hem array kabul eder
     val borderInfo: List<LuckysheetBorder>? = null,
-    val rowlen: Map<String, Int>? = null,      // custom row heights
-    val columnlen: Map<String, Int>? = null,   // custom column widths
-    val rowhidden: Map<String, Int>? = null,   // hidden rows
-    val colhidden: Map<String, Int>? = null,   // hidden columns
-    val customHeight: Map<String, Int>? = null,
-    val customWidth: Map<String, Int>? = null
+    val rowlen: Map<String, Double>? = null,
+    val columnlen: Map<String, Double>? = null,
+    val rowhidden: Map<String, Int>? = null,
+    val colhidden: Map<String, Int>? = null,
+    val customHeight: Map<String, Double>? = null,
+    val customWidth: Map<String, Double>? = null
 )
 
 data class LuckysheetMerge(
@@ -116,9 +111,7 @@ data class LuckysheetCalcChain(
     val func: List<Any>        // function chain
 )
 
-/**
- * Helper data classes for conversion
- */
+
 data class ExcelCellInfo(
     val row: Int,
     val column: Int,
@@ -148,8 +141,8 @@ data class ExcelSheetInfo(
     val index: Int,
     val cells: List<ExcelCellInfo> = emptyList(),
     val mergedRanges: List<ExcelMergedRange> = emptyList(),
-    val columnWidths: Map<Int, Int> = emptyMap(),
-    val rowHeights: Map<Int, Int> = emptyMap(),
+    val columnWidths: Map<Int, Double> = emptyMap(),
+    val rowHeights: Map<Int, Double> = emptyMap(),
     val hiddenRows: Set<Int> = emptySet(),
     val hiddenColumns: Set<Int> = emptySet()
 )
@@ -161,17 +154,14 @@ data class ExcelMergedRange(
     val endColumn: Int
 )
 
-/**
- * Constants for Excel/Luckysheet conversion
- */
+
 object LuckysheetConstants {
-    // Default dimensions
     const val DEFAULT_ROW_COUNT = 100
     const val DEFAULT_COLUMN_COUNT = 26
-    const val DEFAULT_ROW_HEIGHT = 19
-    const val DEFAULT_COLUMN_WIDTH = 73
+    const val DEFAULT_ROW_HEIGHT = 19.0      // ✅ Double
+    const val DEFAULT_COLUMN_WIDTH = 73.0    // ✅ Double
 
-    // Alignment constants
+
     const val ALIGN_LEFT = 0
     const val ALIGN_CENTER = 1
     const val ALIGN_RIGHT = 2
@@ -179,14 +169,13 @@ object LuckysheetConstants {
     const val ALIGN_MIDDLE = 1
     const val ALIGN_BOTTOM = 2
 
-    // Cell type constants
+
     const val TYPE_GENERAL = "g"
     const val TYPE_NUMBER = "n"
     const val TYPE_STRING = "s"
     const val TYPE_DATE = "d"
     const val TYPE_BOOLEAN = "b"
 
-    // Format constants
     const val FORMAT_GENERAL = "General"
     const val FORMAT_NUMBER = "0.00"
     const val FORMAT_PERCENTAGE = "0.00%"
@@ -196,9 +185,6 @@ object LuckysheetConstants {
     const val FORMAT_DATETIME = "yyyy-mm-dd hh:mm:ss"
 }
 
-/**
- * Extension functions for easier data manipulation
- */
 fun LuckysheetSheet.getCellAt(row: Int, column: Int): LuckysheetCell? {
     return celldata?.find { it.r == row && it.c == column }
 }
@@ -223,7 +209,7 @@ fun ExcelCellInfo.toLuckysheetCell(): LuckysheetCell {
                 fa = format ?: LuckysheetConstants.FORMAT_GENERAL,
                 t = cellType
             ),
-            // Style mapping
+
             ff = style?.fontFamily,
             fs = style?.fontSize,
             fc = style?.fontColor,
