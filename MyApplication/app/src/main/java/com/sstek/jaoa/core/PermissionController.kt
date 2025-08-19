@@ -21,9 +21,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 
 @Composable
-fun checkStoragePermissionAndGiveIfNotExists(): Boolean {
+fun CheckStoragePermissionWithExplanation(): Boolean {
     val context = LocalContext.current
     var permissionGranted by remember { mutableStateOf(false) }
+    var showDialog by remember { mutableStateOf(false) }
 
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
@@ -33,26 +34,51 @@ fun checkStoragePermissionAndGiveIfNotExists(): Boolean {
             return@rememberLauncherForActivityResult
         }
 
-        if (!Environment.isExternalStorageManager()) {
+        if (Environment.isExternalStorageManager()) {
+            permissionGranted = true
+        } else {
             Toast.makeText(context, "İzin reddedildi", Toast.LENGTH_LONG).show()
-            return@rememberLauncherForActivityResult
         }
-
-        permissionGranted = true
     }
 
     LaunchedEffect(Unit) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R || Environment.isExternalStorageManager()) {
             permissionGranted = true
-            return@LaunchedEffect
+        } else {
+            showDialog = true // dialogu göster
         }
+    }
 
-        if (Environment.isExternalStorageManager()) {
-            permissionGranted = true
-            return@LaunchedEffect
-        }
-
-        launcher.launch(Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION))
+    if (showDialog) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showDialog = false },
+            title = { androidx.compose.material3.Text("İzin Gerekiyor") },
+            text = {
+                androidx.compose.material3.Text(
+                    "Cihazınızdaki dokümanları görüntüleyebilmemiz için tüm dosyalara erişim izni vermeniz gerekmektedir. Lütfen izin veriniz."
+                )
+            },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = {
+                    showDialog = false
+                    launcher.launch(Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION))
+                }) {
+                    androidx.compose.material3.Text("İzin Ver")
+                }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = {
+                    showDialog = false
+                    Toast.makeText(
+                        context,
+                        "İzin verilmediği için dökümanlar görüntülenemiyor.",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }) {
+                    androidx.compose.material3.Text("İptal")
+                }
+            }
+        )
     }
 
     return permissionGranted

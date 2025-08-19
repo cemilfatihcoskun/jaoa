@@ -6,6 +6,7 @@ import android.webkit.WebView
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -25,6 +26,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.sstek.jaoa.core.JAOATheme
 import com.sstek.jaoa.core.getFileName
 import com.sstek.jaoa.word.utils.htmlPrint
 import com.sstek.jaoa.core.shareDocument
@@ -117,174 +119,186 @@ fun QuillEditorScreen(
         }
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(8.dp)
-                .horizontalScroll(scrollState),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            IconButton(onClick = {
-                viewModel.clearSelectedFile()
-                onBack()
-            }) {
-                Icon(Icons.Default.ArrowBack, contentDescription = "Geri")
-            }
-
-            Spacer(modifier = Modifier.width(8.dp))
-
-            IconButton(onClick = {
-                webView?.evaluateJavascript("quill.history.undo();", null)
-            }) {
-                Icon(Icons.Default.Undo, contentDescription = "Geri Al")
-            }
-
-            IconButton(onClick = {
-                webView?.evaluateJavascript("quill.history.redo();", null)
-            }) {
-                Icon(Icons.Default.Redo, contentDescription = "İleri Al")
-            }
-
-            Spacer(modifier = Modifier.width(8.dp))
-
-            Box {
-                Button(onClick = { pageDropdownExpanded = true }) {
-                    Text("$currentPage/$totalPages")
-                }
-                DropdownMenu(
-                    expanded = pageDropdownExpanded,
-                    onDismissRequest = { pageDropdownExpanded = false }
-                ) {
-                    for (i in 1..totalPages) {
-                        DropdownMenuItem(
-                            text = { Text("$i") },
-                            onClick = {
-                                webView?.evaluateJavascript(
-                                    "window.scrollTo(0, ${(i - 1) * 1123});", null
-                                )
-                                pageDropdownExpanded = false
-                            }
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.weight(1f))
-
-            IconButton(onClick = {
-
-                if (viewModel.selectedFileUri.value != null) {
-                    webView?.evaluateJavascript("window.getHtmlContent();") { html ->
-                        val jsonWrapped = "{ \"data\": $html }"
-                        val obj = JSONObject(jsonWrapped)
-                        val decodedHtml = obj.getString("data")
-                        viewModel.saveHtmlAsDocx(decodedHtml)
-                    }
-                } else {
-                    createDocumentLauncher.launch("Dosya.docx")
-                }
-
-            }) {
-                Icon(Icons.Filled.Save, contentDescription = "Kaydet")
-            }
-
-            IconButton(onClick = {
-                createDocumentLauncher.launch("Dosya.docx")
-            }) {
-                Icon(Icons.Filled.SaveAs, contentDescription = "Farklı Kaydet")
-            }
-
-            IconButton(onClick = {
-                val uri = viewModel.selectedFileUri.value ?: filePath
-                if (uri != null) {
-                    webView?.let {
-                        htmlPrint(it, context)
-                    } ?: {
-                        Toast.makeText(context, "Doküman hazır değil.", Toast.LENGTH_SHORT).show()
-                    }
-
-                } else {
-                    android.widget.Toast.makeText(context, "Henüz dosya kaydedilmedi.", android.widget.Toast.LENGTH_SHORT).show()
-                }
-            }) {
-                Icon(Icons.Default.Print, contentDescription = "Yazdır")
-            }
-
-            IconButton(onClick = {
-                val uri = viewModel.selectedFileUri.value ?: filePath
-                if (uri != null) {
-                    shareDocument(
-                        context,
-                        uri,
-                        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                        getFileName(context, uri)
-                    )
-                } else {
-                    android.widget.Toast.makeText(context, "Henüz dosya kaydedilmedi.", android.widget.Toast.LENGTH_SHORT).show()
-                }
-            }) {
-                Icon(Icons.Default.Share, contentDescription = "Paylaş")
-            }
-
-
-        }
-
-        if (isLoading) {
-            Box(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                contentAlignment = Alignment.Center
+    JAOATheme() {
+        Column(modifier = Modifier.fillMaxSize().statusBarsPadding()) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+                    .padding(8.dp)
+                    .horizontalScroll(scrollState),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                CircularProgressIndicator()
-            }
-        }
+                IconButton(onClick = {
+                    viewModel.clearSelectedFile()
+                    onBack()
+                }) {
+                    Icon(Icons.Default.ArrowBack, contentDescription = "Geri")
+                }
 
-        AndroidView(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
-                .navigationBarsPadding()
-                .imePadding(),
-            factory = { ctx ->
-                WebView(ctx).apply {
-                    fitsSystemWindows = true
+                Spacer(modifier = Modifier.width(8.dp))
 
-                    settings.javaScriptEnabled = true
-                    settings.domStorageEnabled = true
-                    settings.allowFileAccess = true
-                    settings.allowContentAccess = true
+                IconButton(onClick = {
+                    webView?.evaluateJavascript("quill.history.undo();", null)
+                }) {
+                    Icon(Icons.Default.Undo, contentDescription = "Geri Al")
+                }
 
-                    settings.useWideViewPort = true
-                    settings.loadWithOverviewMode = true
+                IconButton(onClick = {
+                    webView?.evaluateJavascript("quill.history.redo();", null)
+                }) {
+                    Icon(Icons.Default.Redo, contentDescription = "İleri Al")
+                }
 
-                    settings.builtInZoomControls = true
-                    settings.displayZoomControls = false
+                Spacer(modifier = Modifier.width(8.dp))
 
-                    webChromeClient = myWebChromeClient
-                    webViewClient = QuillWebViewClient {
-                        val content = htmlContent ?: ""
-                        val escaped = content.replace("\"", "\\\"").replace("\n", "\\n")
-                        evaluateJavascript("window.setHtmlContent(\"$escaped\")", null)
+                Box {
+                    Button(onClick = { pageDropdownExpanded = true }) {
+                        Text("$currentPage/$totalPages")
+                    }
+                    DropdownMenu(
+                        expanded = pageDropdownExpanded,
+                        onDismissRequest = { pageDropdownExpanded = false }
+                    ) {
+                        for (i in 1..totalPages) {
+                            DropdownMenuItem(
+                                text = { Text("$i") },
+                                onClick = {
+                                    webView?.evaluateJavascript(
+                                        "window.scrollTo(0, ${(i - 1) * 1123});", null
+                                    )
+                                    pageDropdownExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.weight(1f))
+
+                IconButton(onClick = {
+
+                    if (viewModel.selectedFileUri.value != null) {
+                        webView?.evaluateJavascript("window.getHtmlContent();") { html ->
+                            val jsonWrapped = "{ \"data\": $html }"
+                            val obj = JSONObject(jsonWrapped)
+                            val decodedHtml = obj.getString("data")
+                            viewModel.saveHtmlAsDocx(decodedHtml)
+                        }
+                    } else {
+                        createDocumentLauncher.launch("Dosya.docx")
                     }
 
-                    addJavascriptInterface(object {
-                        @android.webkit.JavascriptInterface
-                        fun receiveHtml(html: String) {
-                            viewModel.updateHtmlContent(html)
-                        }
-                    }, "AndroidInterface")
-
-                    //addJavascriptInterface(AndroidWebInterface(this, htmlContent ?: ""), "AndroidInterface")
-                    loadUrl("file:///android_asset/quill_editor.html")
-                    webView = this
+                }) {
+                    Icon(Icons.Filled.Save, contentDescription = "Kaydet")
                 }
-            },
-            update = { wv ->
-                val content = htmlContent ?: ""
-                val escaped = content.replace("\"", "\\\"").replace("\n", "\\n")
-                wv.evaluateJavascript("window.setHtmlContent(\"$escaped\")", null)
+
+                IconButton(onClick = {
+                    createDocumentLauncher.launch("Dosya.docx")
+                }) {
+                    Icon(Icons.Filled.SaveAs, contentDescription = "Farklı Kaydet")
+                }
+
+                IconButton(onClick = {
+                    val uri = viewModel.selectedFileUri.value ?: filePath
+                    if (uri != null) {
+                        webView?.let {
+                            htmlPrint(it, context)
+                        } ?: {
+                            Toast.makeText(context, "Doküman hazır değil.", Toast.LENGTH_SHORT)
+                                .show()
+                        }
+
+                    } else {
+                        android.widget.Toast.makeText(
+                            context,
+                            "Henüz dosya kaydedilmedi.",
+                            android.widget.Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }) {
+                    Icon(Icons.Default.Print, contentDescription = "Yazdır")
+                }
+
+                IconButton(onClick = {
+                    val uri = viewModel.selectedFileUri.value ?: filePath
+                    if (uri != null) {
+                        shareDocument(
+                            context,
+                            uri,
+                            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                            getFileName(context, uri)
+                        )
+                    } else {
+                        android.widget.Toast.makeText(
+                            context,
+                            "Henüz dosya kaydedilmedi.",
+                            android.widget.Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }) {
+                    Icon(Icons.Default.Share, contentDescription = "Paylaş")
+                }
+
+
             }
-        )
+
+            if (isLoading) {
+                Box(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            }
+
+            AndroidView(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .imePadding(),
+                factory = { ctx ->
+                    WebView(ctx).apply {
+                        fitsSystemWindows = true
+
+                        settings.javaScriptEnabled = true
+                        settings.domStorageEnabled = true
+                        settings.allowFileAccess = true
+                        settings.allowContentAccess = true
+
+                        settings.useWideViewPort = true
+                        settings.loadWithOverviewMode = true
+
+                        settings.builtInZoomControls = true
+                        settings.displayZoomControls = false
+
+                        webChromeClient = myWebChromeClient
+                        webViewClient = QuillWebViewClient {
+                            val content = htmlContent ?: ""
+                            val escaped = content.replace("\"", "\\\"").replace("\n", "\\n")
+                            evaluateJavascript("window.setHtmlContent(\"$escaped\")", null)
+                        }
+
+                        addJavascriptInterface(object {
+                            @android.webkit.JavascriptInterface
+                            fun receiveHtml(html: String) {
+                                viewModel.updateHtmlContent(html)
+                            }
+                        }, "AndroidInterface")
+
+                        //addJavascriptInterface(AndroidWebInterface(this, htmlContent ?: ""), "AndroidInterface")
+                        loadUrl("file:///android_asset/quill_editor.html")
+                        webView = this
+                    }
+                },
+                update = { wv ->
+                    val content = htmlContent ?: ""
+                    val escaped = content.replace("\"", "\\\"").replace("\n", "\\n")
+                    wv.evaluateJavascript("window.setHtmlContent(\"$escaped\")", null)
+                }
+            )
+        }
     }
 
     LaunchedEffect(Unit) {
