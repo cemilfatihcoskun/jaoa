@@ -1,28 +1,18 @@
 package com.sstek.jaoa.word.utils
 
 import org.apache.poi.xwpf.usermodel.*
+import java.io.File
 import java.math.BigInteger
-import java.util.Base64
 import kotlin.math.abs
+import android.content.Context
+import android.net.Uri
+import org.openxmlformats.schemas.wordprocessingml.x2006.main.STStyleType
+import java.io.FileOutputStream
 
 // pt -> px map tablosu
 val ptToPxMap = mapOf(
-    8 to 11,
-    9 to 12,
-    10 to 13,
-    11 to 15,
-    12 to 16,
-    14 to 19,
-    16 to 22,
-    18 to 24,
-    20 to 26,
-    22 to 29,
-    24 to 32,
-    26 to 35,
-    28 to 37,
-    36 to 48,
-    48 to 64,
-    72 to 96
+    8 to 11, 9 to 12, 10 to 13, 11 to 15, 12 to 16, 14 to 19, 16 to 22,
+    18 to 24, 20 to 26, 22 to 29, 24 to 32, 26 to 35, 28 to 37, 36 to 48, 48 to 64, 72 to 96
 )
 
 // px → en yakın pt karşılığı bulan fonksiyon
@@ -33,19 +23,75 @@ fun pxToClosestPt(px: Int): Int {
 // fontFamily → ql-font-jaoa_... formatına dönüştüren fonksiyon
 fun toJaoaFontClass(fontFamily: String?): String? {
     if (fontFamily.isNullOrBlank()) return null
-    return "ql-font-jaoa_" + fontFamily.trim()
-        .lowercase()
-        .replace(" ", "_")
+    return "ql-font-jaoa_" + fontFamily.trim().lowercase().replace(" ", "_")
 }
 
-fun xwpfToHtml(document: XWPFDocument): String {
+fun logAllStyles(document: XWPFDocument) {
+    val styles: XWPFStyles = document.styles ?: return
+
+    println("-------- STYLES IN DOCX --------")
+    for (style in styles.styles) {
+        val styleType = when (style.type) {
+            STStyleType.PARAGRAPH -> "Paragraph"
+            STStyleType.CHARACTER -> "Character"
+            STStyleType.TABLE -> "Table"
+            else -> "Other"
+        }
+
+        if (styleType != "Paragraph") {
+            continue;
+        }
+
+        val name = style.name ?: "Unnamed"
+        val id = style.styleId ?: "No ID"
+
+        val isDefault = false
+        val isCustom = false
+
+        val pPr = style.ctStyle?.pPr
+        val rPr = style.ctStyle?.rPr
+
+// Alignment
+        val alignment = pPr?.jc?.`val`?.toString()
+
+// Satır aralığı
+        val spacing = pPr?.spacing?.line?.let { it.toString().toLong() / 240.0 }
+
+// Left / Right indent
+        val leftIndent = pPr?.ind?.left?.toString()?.toLong()
+        val rightIndent = pPr?.ind?.right?.toString()?.toLong()
+
+// Karakter formatları
+
+        val fontFamily = rPr?.rFontsArray?.firstOrNull()?.ascii ?: "unspecified"
+
+        // Font size (half pt)
+        val fontSize = rPr?.szArray?.firstOrNull()?.`val`?.toString()?.toInt()?.div(2) ?: 12
+
+        // Bold / Italic / Underline
+        val bold = rPr?.bArray?.firstOrNull()?.`val`?.toString().toBoolean() ?: false
+        val italic = rPr?.iArray?.firstOrNull()?.`val`?.toString().toBoolean() ?: false
+        val underline = rPr?.uArray?.firstOrNull()?.`val`?.toString().toBoolean() ?: "none"
+
+
+        println("Style ID: $id, Name: $name, Type: $styleType, Default: $isDefault, Custom: $isCustom")
+        println("Alignment: $alignment, Spacing: $spacing, LeftIndent: $leftIndent, RightIndent: $rightIndent")
+        println("Font: $fontFamily, Size: $fontSize, Bold: $bold, Italic: $italic, Underline: $underline")
+        println("------------------------------------------------")
+    }
+}
+
+
+
+
+fun xwpfToHtml(context: Context, document: XWPFDocument): String {
     val html = StringBuilder()
-    //html.append("<meta charset=\"utf-8\">")
+    logAllStyles(document)
 
     // Header
     document.headerList.forEach { header ->
         html.append("<header>")
-        header.paragraphs.forEach { html.append(paragraphToHtml(it)) }
+        header.paragraphs.forEach { html.append(paragraphToHtml(context, it)) }
         html.append("</header>")
     }
 
@@ -59,17 +105,10 @@ fun xwpfToHtml(document: XWPFDocument): String {
             BodyElementType.PARAGRAPH -> {
                 val p = bodyElement as XWPFParagraph
                 val numPr = p.numFmt
-
                 if (p.numID != null) {
                     val numId = p.numID.toString()
-                    val ilvl = p.numIlvl?.toInt() ?: 0
+                    val listTag = if (numPr == "bullet") "ul" else "ol"
 
-                    val listTag = when (numPr) {
-                        "bullet" -> "ul"
-                        else -> "ol"
-                    }
-
-                    // Liste aç/kapat mantığı
                     if (currentListId == null) {
                         html.append("<$listTag>")
                         listLevelStack.add(listTag)
@@ -86,25 +125,22 @@ fun xwpfToHtml(document: XWPFDocument): String {
                     }
 
                     html.append("<li>")
-                    html.append(paragraphToHtml(p).removeSurrounding("<p>", "</p>"))
+                    html.append(paragraphToHtml(context, p).removeSurrounding("<p>", "</p>"))
                     html.append("</li>")
                 } else {
-                    // Önceki açık listeyi kapat
                     while (listLevelStack.isNotEmpty()) {
                         html.append("</${listLevelStack.removeAt(listLevelStack.lastIndex)}>")
                     }
                     currentListId = null
                     currentListType = null
-                    html.append(paragraphToHtml(p))
+                    html.append(paragraphToHtml(context, p))
                 }
             }
-
-            BodyElementType.TABLE -> html.append(tableToHtml(bodyElement as XWPFTable))
-            else -> {} // ContentControl gibi diğerleri şimdilik boş
+            BodyElementType.TABLE -> html.append(tableToHtml(context, bodyElement as XWPFTable))
+            else -> {}
         }
     }
 
-    // Kalan listeleri kapat
     while (listLevelStack.isNotEmpty()) {
         html.append("</${listLevelStack.removeAt(listLevelStack.lastIndex)}>")
     }
@@ -112,14 +148,14 @@ fun xwpfToHtml(document: XWPFDocument): String {
     // Footer
     document.footerList.forEach { footer ->
         html.append("<footer>")
-        footer.paragraphs.forEach { html.append(paragraphToHtml(it)) }
+        footer.paragraphs.forEach { html.append(paragraphToHtml(context, it)) }
         html.append("</footer>")
     }
 
     return html.toString()
 }
 
-fun paragraphToHtml(paragraph: XWPFParagraph): String {
+fun paragraphToHtml(context: Context, paragraph: XWPFParagraph): String {
     val html = StringBuilder()
 
     val alignment = when (paragraph.alignment) {
@@ -135,20 +171,12 @@ fun paragraphToHtml(paragraph: XWPFParagraph): String {
             val lineVal = paragraph.ctp.pPr?.spacing?.line
             if (lineVal != null) (lineVal as BigInteger).toDouble() / 240 else null
         }
-    } catch (e: Exception) {
-        null
-    }
-
-    println("xwpftohtml lineheight $lineSpacing")
+    } catch (e: Exception) { null }
 
     val styleParts = mutableListOf("text-align:$alignment;")
-    if (lineSpacing != null && lineSpacing != 0.0 && lineSpacing != 1.0) {
-        styleParts.add("line-height:${lineSpacing};")
-    }
-
+    if (lineSpacing != null && lineSpacing != 0.0 && lineSpacing != 1.0) styleParts.add("line-height:${lineSpacing};")
     val styleAttr = styleParts.joinToString(" ")
 
-    // 💡 Burada heading kontrolü yap
     val styleId = paragraph.style?.replace(" ", "")?.lowercase()
     val tag = when (styleId) {
         "heading1" -> "h1"
@@ -160,35 +188,21 @@ fun paragraphToHtml(paragraph: XWPFParagraph): String {
         else -> "p"
     }
 
-    if (styleId != null) {
-        println("xwpftohtml $styleId")
-    }
-
-
     html.append("<$tag style=\"$styleAttr\">")
-    for (run in paragraph.runs) {
-        html.append(runToHtml(run))
-    }
+    for (run in paragraph.runs) html.append(runToHtml(context, run))
     html.append("</$tag>")
 
     return html.toString()
 }
 
-
-
-fun runToHtml(run: XWPFRun): String {
+fun runToHtml(context: Context, run: XWPFRun): String {
     val html = StringBuilder()
     val text = run.text() ?: ""
 
     val classes = mutableListOf<String>()
-    val fontClass = toJaoaFontClass(run.fontFamily)
-    if (fontClass != null) classes.add(fontClass)
+    toJaoaFontClass(run.fontFamily)?.let { classes.add(it) }
 
-    val fontSizePt = try {
-        (run.ctr.rPr.szArray?.firstOrNull()?.`val` as? BigInteger)?.toInt()?.div(2)
-    } catch (e: Exception) {
-        null
-    } ?: 12
+    val fontSizePt = try { (run.ctr.rPr.szArray?.firstOrNull()?.`val` as? BigInteger)?.toInt()?.div(2) } catch (e: Exception) { null } ?: 12
     classes.add("ql-size-${fontSizePt}pt")
 
     val styles = mutableListOf<String>()
@@ -197,8 +211,7 @@ fun runToHtml(run: XWPFRun): String {
     if (run.underline != UnderlinePatterns.NONE) styles.add("text-decoration:underline;")
     val highlight = backgroundColorNameNormalizationXwpfToQuill(run.textHighlightColor.toString())
     if (!highlight.isNullOrBlank() && highlight.lowercase() != "none") styles.add("background-color:$highlight;")
-    val color = run.color
-    if (!color.isNullOrBlank()) styles.add("color:#$color;")
+    run.color?.let { styles.add("color:#$it;") }
 
     val styleAttr = styles.joinToString("")
 
@@ -206,21 +219,15 @@ fun runToHtml(run: XWPFRun): String {
         html.append("<span class=\"${classes.joinToString(" ")}\" style=\"$styleAttr\">")
         html.append(escapeHtml(text))
         html.append("</span>")
-    } else {
-        html.append(escapeHtml(text))
-    }
+    } else html.append(escapeHtml(text))
 
-    // Resimler varsa
+    // Resimler temp klasöre kaydedilir ve src oradan yüklenir
     if (run.embeddedPictures.isNotEmpty()) {
-        for (picture in run.embeddedPictures) {
-            html.append(pictureToHtml(picture))
-        }
+        for (pic in run.embeddedPictures) html.append(pictureToHtmlTemp(context, pic))
     }
 
     return html.toString()
 }
-
-
 
 fun getPictureSizeInPx(picture: XWPFPicture): Pair<Int, Int> {
     val ctExtent = picture.ctPicture.spPr?.xfrm?.ext ?: return Pair(0, 0)
@@ -235,26 +242,32 @@ fun getPictureSizeInPx(picture: XWPFPicture): Pair<Int, Int> {
 }
 
 
-
-fun pictureToHtml(picture: XWPFPicture): String {
+fun pictureToHtmlTemp(context: Context, picture: XWPFPicture): String {
     val pictureData = picture.pictureData ?: return ""
-    val base64 = Base64.getEncoder().encodeToString(pictureData.data)
-    val ext = pictureData.suggestFileExtension()
-    val mimeType = when (ext.lowercase()) {
-        "emf" -> "image/emf"
-        "wmf" -> "image/wmf"
-        "pict" -> "image/pict"
-        "jpeg", "jpg" -> "image/jpeg"
-        "png" -> "image/png"
-        "dib" -> "image/bmp"
-        "gif" -> "image/gif"
-        "tiff" -> "image/tiff"
-        "eps" -> "image/eps"
-        "bmp" -> "image/bmp"
-        "wpg" -> "image/wpg"
-        else -> "image/png"
+
+    // pictureType üzerinden uzantı belirleme
+    val ext = when (pictureData.pictureType) {
+        Document.PICTURE_TYPE_BMP -> "bmp"
+        Document.PICTURE_TYPE_EMF -> "emf"
+        Document.PICTURE_TYPE_WMF -> "wmf"
+        Document.PICTURE_TYPE_PICT -> "pict"
+        Document.PICTURE_TYPE_JPEG -> "jpg"
+        Document.PICTURE_TYPE_PNG -> "png"
+        Document.PICTURE_TYPE_DIB -> "dib"
+        Document.PICTURE_TYPE_GIF -> "gif"
+        Document.PICTURE_TYPE_TIFF -> "tiff"
+        Document.PICTURE_TYPE_EPS -> "eps"
+        Document.PICTURE_TYPE_WPG -> "wpg"
+        else -> "png"
     }
 
+    // Temp dosya oluştur
+    val tempFile = File.createTempFile("jaoa_image_", ".$ext", context.cacheDir)
+    FileOutputStream(tempFile).use { fos ->
+        fos.write(pictureData.data)
+    }
+
+    // Resim boyutu
     val (widthPx, heightPx) = getPictureSizeInPx(picture)
 
     // Eğer boyut alınamadıysa style kısmına max-width ve auto koyabiliriz
@@ -266,43 +279,33 @@ fun pictureToHtml(picture: XWPFPicture): String {
 
     println("xwpftohtml, imgsize: $widthPx, $heightPx")
 
-    return """<img width="$widthPx" height="$heightPx" src="data:$mimeType;base64,$base64" />"""
+    val base64 = android.util.Base64.encodeToString(pictureData.data, android.util.Base64.NO_WRAP)
+    return """<img style="$style" src="data:image/$ext;base64,$base64"/>"""
 }
 
-fun tableToHtml(table: XWPFTable): String {
+fun tableToHtml(context: Context, table: XWPFTable): String {
     val html = StringBuilder()
     html.append("<table border=\"1\" cellspacing=\"0\" cellpadding=\"5\" style=\"border-collapse:collapse;\">")
-
     for (row in table.rows) {
         html.append("<tr>")
         for (cell in row.tableCells) {
-            val isHeader = cell.paragraphs.any { p -> p.runs.any { r -> r.isBold } }
+            val isHeader = cell.paragraphs.any { p -> p.runs.any { it.isBold } }
             val tag = if (isHeader) "th" else "td"
             html.append("<$tag>")
-            for (p in cell.paragraphs) {
-                html.append(paragraphToHtml(p))
-            }
+            for (p in cell.paragraphs) html.append(paragraphToHtml(context, p))
             html.append("</$tag>")
         }
         html.append("</tr>")
     }
-
     html.append("</table>")
     return html.toString()
 }
 
 fun escapeHtml(text: String): String {
-    return text.replace("&", "&amp;")
-        .replace("<", "&lt;")
-        .replace(">", "&gt;")
-        .replace("\"", "&quot;")
-        .replace("'", "&#39;")
+    return text.replace("&","&amp;").replace("<","&lt;").replace(">","&gt;")
+        .replace("\"","&quot;").replace("'","&#39;")
 }
 
-fun backgroundColorNameNormalizationXwpfToQuill(name: String): String {
-    return when (name) {
-        "darkYellow" -> "rgb(139, 128, 0)"
-        else -> name
-    }
+fun backgroundColorNameNormalizationXwpfToQuill(name:String): String {
+    return when(name){"darkYellow"->"rgb(139,128,0)";else->name}
 }
-

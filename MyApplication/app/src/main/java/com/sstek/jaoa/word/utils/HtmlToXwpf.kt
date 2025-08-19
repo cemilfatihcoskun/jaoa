@@ -221,11 +221,12 @@ fun htmlToXwpf(
 
             "img" -> {
                 val src = element.attr("src")
-                val para = document.createParagraph()
+                val para = paragraph ?: document.createParagraph()
 
                 try {
                     val inputStream = when {
                         src.startsWith("data:image") -> {
+                            // Base64 çöz ve InputStream oluştur
                             val base64Data = src.substringAfter("base64,")
                             ByteArrayInputStream(Base64.getDecoder().decode(base64Data))
                         }
@@ -246,6 +247,7 @@ fun htmlToXwpf(
                             else -> XWPFDocument.PICTURE_TYPE_PNG
                         }
 
+                        // Style veya width/height attr kullan
                         val style = element.attr("style")
                         val widthPx = Regex("width\\s*:\\s*(\\d+)px").find(style)?.groupValues?.get(1)?.toIntOrNull()
                         val heightPx = Regex("height\\s*:\\s*(\\d+)px").find(style)?.groupValues?.get(1)?.toIntOrNull()
@@ -255,8 +257,8 @@ fun htmlToXwpf(
                         val finalWidthPx = widthPx ?: widthAttr ?: DEFAULT_WIDTH_UNITS_TO_EMU.toInt()
                         val finalHeightPx = heightPx ?: heightAttr ?: DEFAULT_HEIGHT_UNITS_TO_EMU.toInt()
 
-                        val widthEmu = pxToEmu(finalWidthPx.toInt())
-                        val heightEmu = pxToEmu(finalHeightPx.toInt())
+                        val widthEmu = pxToEmu(finalWidthPx)
+                        val heightEmu = pxToEmu(finalHeightPx)
 
                         inputStream.use {
                             para.createRun().addPicture(
@@ -265,11 +267,15 @@ fun htmlToXwpf(
                                 heightEmu
                             )
                         }
+                    } else {
+                        println("Resim InputStream null: $src")
                     }
                 } catch (e: Exception) {
                     println("HATA: Resim eklenirken: ${e.message}")
                 }
             }
+
+
 
             "table" -> {
                 val rows = element.getElementsByTag("tr")

@@ -42,13 +42,20 @@
       border-bottom: 1px solid #ccc;
       padding: 8px;
     }
+    
+	#editor-container {
+		width: 794px;        /* A4 genişliği */
+		min-height: 1123px;  /* A4 yüksekliği */
+		margin: 40px auto;   /* üst-alt boşluk + ortalama */
+		padding: 16px;       /* içerik kenar boşluğu */
+		font-family: Arial, sans-serif;
+		font-size: 16px;
+		
+		border: 1px solid #ccc;  /* tüm kenarlar */
+		box-sizing: border-box;   /* padding dahil etmesi için */
+		overflow-y: scroll;
+	}
 
-    #editor-container {
-      padding: 16px;
-      min-height: 100vh;
-      font-family: Arial, sans-serif;
-      font-size: 16px;
-    }
     
     .ql-lineheight {
 	  width: 60px;
