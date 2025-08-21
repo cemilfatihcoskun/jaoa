@@ -49,7 +49,7 @@ class LuckysheetToExcelConverter {
         sheetData.celldata?.forEach { cellInfo ->
             convertCell(sheet, cellInfo, styleCache)
         }
-
+        processBorders(sheet, sheetData.config?.borderInfo, workbook)
         // ✅ Merge işlemi - hem object hem array formatını handle et
         try {
             val mergedRanges = parseMergeFromConfig(sheetData.config)
@@ -95,6 +95,258 @@ class LuckysheetToExcelConverter {
             } catch (e: Exception) {
                 Log.w(TAG, "Could not set row height for row $rowIndex", e)
             }
+        }
+    }
+    private fun processBorders(sheet: XSSFSheet, borderInfo: List<Any>?, workbook: XSSFWorkbook) {
+        if (borderInfo.isNullOrEmpty()) {
+            Log.d(TAG, "No border info to process")
+            return
+        }
+
+        Log.d(TAG, "Processing ${borderInfo.size} border entries...")
+
+        borderInfo.forEach { borderItem ->
+            try {
+                val borderJson = gson.toJsonTree(borderItem).asJsonObject
+
+                val borderType = borderJson.get("borderType")?.asString ?: "border-all"
+                val color = borderJson.get("color")?.asString ?: "#000000"
+                val style = borderJson.get("style")?.asString ?: "1"
+
+                Log.d(TAG, "Processing border: type=$borderType, color=$color, style=$style")
+
+                val rangeArray = borderJson.get("range")?.asJsonArray
+                rangeArray?.forEach { rangeElement ->
+                    val rangeObj = rangeElement.asJsonObject
+                    val rowArray = rangeObj.get("row")?.asJsonArray
+                    val columnArray = rangeObj.get("column")?.asJsonArray
+                        ?: rangeObj.get("col")?.asJsonArray
+
+                    if (rowArray != null && columnArray != null) {
+                        val startRow = rowArray[0].asInt
+                        val endRow = rowArray[1].asInt
+                        val startCol = columnArray[0].asInt
+                        val endCol = columnArray[1].asInt
+
+                        Log.d(TAG, "Applying range border to ($startRow,$startCol) to ($endRow,$endCol)")
+
+                        when (borderType) {
+                            "border-all" -> {
+                                for (r in startRow..endRow) {
+                                    for (c in startCol..endCol) {
+                                        applyCellBorder(sheet, r, c, workbook, color, style)
+                                    }
+                                }
+                            }
+                            "border-none" -> {
+                                for (r in startRow..endRow) {
+                                    for (c in startCol..endCol) {
+                                        removeCellBorder(sheet, r, c, workbook)
+                                    }
+                                }
+                            }
+                            "border-top" -> {
+                                for (c in startCol..endCol) {
+                                    applySpecificBorderSide(sheet, startRow, c, workbook, color, style, "top")
+                                }
+                            }
+                            "border-bottom" -> {
+                                for (c in startCol..endCol) {
+                                    applySpecificBorderSide(sheet, endRow, c, workbook, color, style, "bottom")
+                                }
+                            }
+                            "border-left" -> {
+                                for (r in startRow..endRow) {
+                                    applySpecificBorderSide(sheet, r, startCol, workbook, color, style, "left")
+                                }
+                            }
+                            "border-right" -> {
+                                for (r in startRow..endRow) {
+                                    applySpecificBorderSide(sheet, r, endCol, workbook, color, style, "right")
+                                }
+                            }
+                            "border-outside" -> {
+                                applyOutsideBorder(sheet, startRow, endRow, startCol, endCol, workbook, color, style)
+                            }
+                            "border-inside" -> {
+                                applyInsideBorder(sheet, startRow, endRow, startCol, endCol, workbook, color, style)
+                            }
+                            "border-horizontal" -> {
+                                for (r in (startRow + 1)..endRow) {
+                                    for (c in startCol..endCol) {
+                                        applySpecificBorderSide(sheet, r, c, workbook, color, style, "top")
+                                    }
+                                }
+                            }
+                            "border-vertical" -> {
+                                for (c in (startCol + 1)..endCol) {
+                                    for (r in startRow..endRow) {
+                                        applySpecificBorderSide(sheet, r, c, workbook, color, style, "left")
+                                    }
+                                }
+                            }
+                            else -> {
+                                Log.w(TAG, "Unknown border type: $borderType")
+                            }
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error processing border item: ${e.message}")
+            }
+        }
+    }
+
+    private fun applySpecificBorderSide(sheet: XSSFSheet, row: Int, col: Int, workbook: XSSFWorkbook,
+                                        color: String, style: String, borderSide: String) {
+        val excelRow = sheet.getRow(row) ?: sheet.createRow(row)
+        val cell = excelRow.getCell(col) ?: excelRow.createCell(col)
+
+        val cellStyle = workbook.createCellStyle()
+        cellStyle.cloneStyleFrom(cell.cellStyle)
+
+        val borderStyle = when (style) {
+            "0" -> BorderStyle.NONE
+            "1" -> BorderStyle.THIN
+            "2" -> BorderStyle.THICK
+            "3" -> BorderStyle.DASHED
+            "4" -> BorderStyle.DOTTED
+            "5" -> BorderStyle.DOUBLE
+            else -> BorderStyle.THIN
+        }
+
+        val xssfColor = hexToXSSFColor(color)
+
+        when (borderSide) {
+            "top" -> {
+                cellStyle.borderTop = borderStyle
+                xssfColor?.let { cellStyle.setTopBorderColor(it) }
+            }
+            "bottom" -> {
+                cellStyle.borderBottom = borderStyle
+                xssfColor?.let { cellStyle.setBottomBorderColor(it) }
+            }
+            "left" -> {
+                cellStyle.borderLeft = borderStyle
+                xssfColor?.let { cellStyle.setLeftBorderColor(it) }
+            }
+            "right" -> {
+                cellStyle.borderRight = borderStyle
+                xssfColor?.let { cellStyle.setRightBorderColor(it) }
+            }
+        }
+
+        cell.cellStyle = cellStyle
+    }
+
+    private fun removeCellBorder(sheet: XSSFSheet, row: Int, col: Int, workbook: XSSFWorkbook) {
+        val excelRow = sheet.getRow(row) ?: sheet.createRow(row)
+        val cell = excelRow.getCell(col) ?: excelRow.createCell(col)
+
+        val cellStyle = workbook.createCellStyle()
+        cellStyle.cloneStyleFrom(cell.cellStyle)
+
+
+        cellStyle.borderLeft = BorderStyle.NONE
+        cellStyle.borderRight = BorderStyle.NONE
+        cellStyle.borderTop = BorderStyle.NONE
+        cellStyle.borderBottom = BorderStyle.NONE
+
+        cell.cellStyle = cellStyle
+    }
+
+
+    private fun applyOutsideBorder(sheet: XSSFSheet, startRow: Int, endRow: Int, startCol: Int, endCol: Int,
+                                   workbook: XSSFWorkbook, color: String, style: String) {
+        // Üst border
+        for (c in startCol..endCol) {
+            applySpecificBorderSide(sheet, startRow, c, workbook, color, style, "top")
+        }
+        // Alt border
+        for (c in startCol..endCol) {
+            applySpecificBorderSide(sheet, endRow, c, workbook, color, style, "bottom")
+        }
+        // Sol border
+        for (r in startRow..endRow) {
+            applySpecificBorderSide(sheet, r, startCol, workbook, color, style, "left")
+        }
+        // Sağ border
+        for (r in startRow..endRow) {
+            applySpecificBorderSide(sheet, r, endCol, workbook, color, style, "right")
+        }
+    }
+
+    private fun applyInsideBorder(sheet: XSSFSheet, startRow: Int, endRow: Int, startCol: Int, endCol: Int,
+                                  workbook: XSSFWorkbook, color: String, style: String) {
+
+        for (r in (startRow + 1)..endRow) {
+            for (c in startCol..endCol) {
+                applySpecificBorderSide(sheet, r, c, workbook, color, style, "top")
+            }
+        }
+
+        for (c in (startCol + 1)..endCol) {
+            for (r in startRow..endRow) {
+                applySpecificBorderSide(sheet, r, c, workbook, color, style, "left")
+            }
+        }
+    }
+
+    private fun applyCellBorder(sheet: XSSFSheet, row: Int, col: Int, workbook: XSSFWorkbook, color: String, style: String) {
+        val excelRow = sheet.getRow(row) ?: sheet.createRow(row)
+        val cell = excelRow.getCell(col) ?: excelRow.createCell(col)
+
+        val cellStyle = workbook.createCellStyle()
+        cellStyle.cloneStyleFrom(cell.cellStyle)
+
+        val borderStyle = when (style) {
+            "0" -> BorderStyle.NONE
+            "1" -> BorderStyle.THIN
+            "2" -> BorderStyle.THICK
+            "3" -> BorderStyle.DASHED
+            "4" -> BorderStyle.DOTTED
+            "5" -> BorderStyle.DOUBLE
+            else -> BorderStyle.THIN
+        }
+        Log.d(TAG, "Applying border - color: $color, style: $style to cell ($row,$col)")
+        if (borderStyle == BorderStyle.NONE) {
+            cellStyle.borderLeft = BorderStyle.NONE
+            cellStyle.borderRight = BorderStyle.NONE
+            cellStyle.borderTop = BorderStyle.NONE
+            cellStyle.borderBottom = BorderStyle.NONE
+        } else {
+            cellStyle.borderLeft = borderStyle
+            cellStyle.borderRight = borderStyle
+            cellStyle.borderTop = borderStyle
+            cellStyle.borderBottom = borderStyle
+
+            val xssfColor = hexToXSSFColor(color)
+            Log.d(TAG, "Converted color $color to XSSFColor: ${xssfColor != null}")
+            if (xssfColor != null) {
+                cellStyle.setLeftBorderColor(xssfColor)
+                cellStyle.setRightBorderColor(xssfColor)
+                cellStyle.setTopBorderColor(xssfColor)
+                cellStyle.setBottomBorderColor(xssfColor)
+                Log.d(TAG, "✅ Applied XSSFColor to borders")
+            }
+        }
+
+        cell.cellStyle = cellStyle
+    }
+    private fun hexToXSSFColor(hex: String): XSSFColor? {
+        return try {
+            val cleanHex = hex.removePrefix("#").uppercase()
+            if (cleanHex.length != 6) return null
+
+            val rgb = ByteArray(3)
+            rgb[0] = cleanHex.substring(0, 2).toInt(16).toByte()
+            rgb[1] = cleanHex.substring(2, 4).toInt(16).toByte()
+            rgb[2] = cleanHex.substring(4, 6).toInt(16).toByte()
+
+            XSSFColor(rgb, null) // AWT-free!
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not parse color: $hex", e)
+            null
         }
     }
 

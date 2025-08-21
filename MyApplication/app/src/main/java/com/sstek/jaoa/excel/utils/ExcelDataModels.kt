@@ -67,7 +67,7 @@ data class LuckysheetRichText(
 
 data class LuckysheetConfig(
     val merge: Any? = null,  // ✅ List yerine Any - hem object hem array kabul eder
-    val borderInfo: List<LuckysheetBorder>? = null,
+    val borderInfo: List<Any>? = null,
     val rowlen: Map<String, Double>? = null,
     val columnlen: Map<String, Double>? = null,
     val rowhidden: Map<String, Int>? = null,
