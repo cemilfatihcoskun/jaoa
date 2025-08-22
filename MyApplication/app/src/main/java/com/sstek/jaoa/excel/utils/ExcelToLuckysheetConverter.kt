@@ -129,7 +129,7 @@ class ExcelToLuckysheetConverter {
                                 "rangeType" to "range",
                                 "borderType" to "border-all",
                                 "style" to extractBorderStyleForSide(style, "top"),
-                                "color" to (extractBorderColorForSide(style, "top") ?: "#000000"),
+                                "color" to (ExcelColorUtils.extractBorderColor(style, "top")),
                                 "range" to listOf(mapOf(
                                     "row" to listOf(r, r),
                                     "column" to listOf(c, c)
@@ -157,10 +157,10 @@ class ExcelToLuckysheetConverter {
             val leftStyle = extractBorderStyleForSide(style, "left")
             val rightStyle = extractBorderStyleForSide(style, "right")
 
-            val topColor = extractBorderColorForSide(style, "top")
-            val bottomColor = extractBorderColorForSide(style, "bottom")
-            val leftColor = extractBorderColorForSide(style, "left")
-            val rightColor = extractBorderColorForSide(style, "right")
+            val topColor = ExcelColorUtils.extractBorderColor(style, "top")
+            val bottomColor = ExcelColorUtils.extractBorderColor(style, "bottom")
+            val leftColor = ExcelColorUtils.extractBorderColor(style, "left")
+            val rightColor = ExcelColorUtils.extractBorderColor(style, "right")
 
             topStyle == bottomStyle && bottomStyle == leftStyle && leftStyle == rightStyle &&
                     topColor == bottomColor && bottomColor == leftColor && leftColor == rightColor
@@ -181,7 +181,7 @@ class ExcelToLuckysheetConverter {
                 "rangeType" to "range",
                 "borderType" to "border-top",
                 "style" to extractBorderStyleForSide(style, "top"),
-                "color" to (extractBorderColorForSide(style, "top") ?: "#000000"),
+                "color" to (ExcelColorUtils.extractBorderColor(style, "top")),
                 "range" to listOf(mapOf(
                     "row" to listOf(r, r),
                     "column" to listOf(c, c)
@@ -195,7 +195,7 @@ class ExcelToLuckysheetConverter {
                 "rangeType" to "range",
                 "borderType" to "border-bottom",
                 "style" to extractBorderStyleForSide(style, "bottom"),
-                "color" to (extractBorderColorForSide(style, "bottom") ?: "#000000"),
+                "color" to (ExcelColorUtils.extractBorderColor(style, "bottom")),
                 "range" to listOf(mapOf(
                     "row" to listOf(r, r),
                     "column" to listOf(c, c)
@@ -208,7 +208,7 @@ class ExcelToLuckysheetConverter {
                 "rangeType" to "range",
                 "borderType" to "border-left",
                 "style" to extractBorderStyleForSide(style, "left"),
-                "color" to (extractBorderColorForSide(style, "left") ?: "#000000"),
+                "color" to (ExcelColorUtils.extractBorderColor(style, "left")),
                 "range" to listOf(mapOf(
                     "row" to listOf(r, r),
                     "column" to listOf(c, c)
@@ -221,7 +221,7 @@ class ExcelToLuckysheetConverter {
                 "rangeType" to "range",
                 "borderType" to "border-right",
                 "style" to extractBorderStyleForSide(style, "right"),
-                "color" to (extractBorderColorForSide(style, "right") ?: "#000000"),
+                "color" to (ExcelColorUtils.extractBorderColor(style, "right")),
                 "range" to listOf(mapOf(
                     "row" to listOf(r, r),
                     "column" to listOf(c, c)
@@ -267,12 +267,12 @@ class ExcelToLuckysheetConverter {
 
                 ff = font.fontName ?: "Arial",
                 fs = font.fontHeightInPoints.toInt().takeIf { it > 0 } ?: 11,
-                fc = extractFontColor(font as? XSSFFont),
+                fc =  SimpleFontColorUtils.extractFontColorSimple(font),
                 bl = if (font.bold) 1 else 0,
                 it = if (font.italic) 1 else 0,
                 cl = if (font.underline != Font.U_NONE) 1 else 0,
 
-                bg = extractBackgroundColor(cellStyle as? XSSFCellStyle),
+                bg = ExcelColorUtils.extractBackgroundColor(cellStyle as? XSSFCellStyle),
                 ht = getHorizontalAlignment(cellStyle.alignment),
                 vt = getVerticalAlignment(cellStyle.verticalAlignment)
             )
@@ -289,205 +289,7 @@ class ExcelToLuckysheetConverter {
         }
     }
 
-    private fun extractBorderColorForSide(cellStyle: CellStyle, side: String): String {
-        Log.d(TAG, "🎨 Extracting border color for side: $side")
 
-        try {
-            val hasBorder = when (side) {
-                "top" -> cellStyle.borderTop != BorderStyle.NONE
-                "bottom" -> cellStyle.borderBottom != BorderStyle.NONE
-                "left" -> cellStyle.borderLeft != BorderStyle.NONE
-                "right" -> cellStyle.borderRight != BorderStyle.NONE
-                else -> false
-            }
-
-            if (!hasBorder) {
-                Log.d(TAG, "🎨 No border on $side, returning default black")
-                return "#000000"
-            }
-
-            val xssfStyle = cellStyle as? XSSFCellStyle
-            if (xssfStyle != null) {
-                Log.d(TAG, "🎨 Using XSSF color extraction")
-                return extractXSSFBorderColor(xssfStyle, side)
-            } else {
-                Log.d(TAG, "🎨 Using indexed color extraction")
-                return extractIndexedBorderColor(cellStyle, side)
-            }
-
-        } catch (e: Exception) {
-            Log.e(TAG, "🎨 Error extracting border color for $side: ${e.message}")
-            return "#000000"
-        }
-    }
-    private fun extractXSSFBorderColor(xssfStyle: XSSFCellStyle, side: String): String {
-        try {
-            val xssfColor = when (side) {
-                "top" -> xssfStyle.topBorderXSSFColor
-                "bottom" -> xssfStyle.bottomBorderXSSFColor
-                "left" -> xssfStyle.leftBorderXSSFColor
-                "right" -> xssfStyle.rightBorderXSSFColor
-                else -> null
-            }
-
-            if (xssfColor != null) {
-                val hexColor = convertXSSFColorToHex(xssfColor)
-                Log.d(TAG, "🎨 XSSF color for $side: $hexColor")
-                return hexColor
-            }
-
-            Log.d(TAG, "🎨 No XSSF color found for $side, trying indexed")
-            return extractIndexedBorderColor(xssfStyle, side)
-
-        } catch (e: Exception) {
-            Log.e(TAG, "🎨 XSSF color extraction failed for $side: ${e.message}")
-            return extractIndexedBorderColor(xssfStyle, side)
-        }
-    }
-
-    // ✅ INDEXED COLOR EXTRACTION (Legacy Excel format)
-    private fun extractIndexedBorderColor(cellStyle: CellStyle, side: String): String {
-        try {
-            val colorIndex = when (side) {
-                "top" -> cellStyle.topBorderColor
-                "bottom" -> cellStyle.bottomBorderColor
-                "left" -> cellStyle.leftBorderColor
-                "right" -> cellStyle.rightBorderColor
-                else -> 8.toShort() // Default black
-            }
-
-            Log.d(TAG, "🎨 Color index for $side: $colorIndex")
-            val hexColor = convertIndexToHex(colorIndex.toInt())
-            Log.d(TAG, "🎨 Indexed color for $side: $hexColor")
-            return hexColor
-
-        } catch (e: Exception) {
-            Log.e(TAG, "🎨 Indexed color extraction failed for $side: ${e.message}")
-            return "#000000"
-        }
-    }
-    private fun convertXSSFColorToHex(xssfColor: XSSFColor): String {
-        try {
-            try {
-                val rgbField = xssfColor.javaClass.getDeclaredField("rgb")
-                rgbField.isAccessible = true
-                val rgbBytes = rgbField.get(xssfColor) as? ByteArray
-
-                if (rgbBytes != null && rgbBytes.size >= 3) {
-                    val r = rgbBytes[0].toInt() and 0xFF
-                    val g = rgbBytes[1].toInt() and 0xFF
-                    val b = rgbBytes[2].toInt() and 0xFF
-                    val hexColor = String.format("#%02X%02X%02X", r, g, b)
-                    Log.d(TAG, "🎨 RGB extraction successful: $hexColor (R:$r, G:$g, B:$b)")
-                    return hexColor
-                }
-            } catch (e: Exception) {
-                Log.d(TAG, "🎨 RGB field access failed, trying alternative methods")
-            }
-
-
-            try {
-                val argbHex = xssfColor.argbHex
-                if (argbHex != null && argbHex.length >= 8) {
-                    val hexColor = "#" + argbHex.substring(2) // Remove alpha channel
-                    Log.d(TAG, "🎨 ARGB extraction successful: $hexColor")
-                    return hexColor
-                }
-            } catch (e: Exception) {
-                Log.d(TAG, "🎨 ARGB access failed")
-            }
-
-            try {
-                val indexed = xssfColor.indexed
-                if (indexed >= 0) {
-                    val hexColor = convertIndexToHex(indexed.toInt())
-                    Log.d(TAG, "🎨 Indexed fallback successful: $hexColor")
-                    return hexColor
-                }
-            } catch (e: Exception) {
-                Log.d(TAG, "🎨 Indexed fallback failed")
-            }
-
-            Log.w(TAG, "🎨 All XSSFColor extraction methods failed, using default")
-            return "#000000"
-
-        } catch (e: Exception) {
-            Log.e(TAG, "🎨 XSSFColor conversion completely failed: ${e.message}")
-            return "#000000"
-        }
-    }
-
-    private fun convertIndexToHex(colorIndex: Int): String {
-        Log.d(TAG, "🎨 Converting color index: $colorIndex")
-
-        val hexColor = when (colorIndex) {
-            // Basic colors
-            0, 8 -> "#000000"   // Auto/Black
-            1 -> "#000000"      // Black
-            2 -> "#FFFFFF"      // White
-            3 -> "#FF0000"      // Red
-            4 -> "#00FF00"      // Green
-            5 -> "#0000FF"      // Blue
-            6 -> "#FFFF00"      // Yellow
-            7 -> "#FF00FF"      // Magenta
-            9 -> "#800000"      // Dark Red
-            10 -> "#008000"     // Dark Green
-            11 -> "#000080"     // Dark Blue
-            12 -> "#808000"     // Olive
-            13 -> "#800080"     // Purple
-            14 -> "#008080"     // Teal
-            15 -> "#C0C0C0"     // Silver
-            16 -> "#808080"     // Gray
-
-            // Extended colors
-            17 -> "#9999FF"     // Light Blue
-            18 -> "#993366"     // Dark Pink
-            19 -> "#FFFFCC"     // Light Yellow
-            20 -> "#CCFFFF"     // Light Cyan
-            21 -> "#660066"     // Dark Purple
-            22 -> "#FF8080"     // Light Red
-            23 -> "#0066CC"     // Medium Blue
-            24 -> "#CCCCFF"     // Very Light Blue
-            25 -> "#000080"     // Navy Blue
-            26 -> "#FF0000"     // Red Accent
-            27 -> "#00B050"     // Green Accent
-            28 -> "#0070C0"     // Blue Accent
-            29 -> "#FFC000"     // Orange Accent
-            30 -> "#7030A0"     // Purple Accent
-            31 -> "#C5504B"     // Dark Red Accent
-            32 -> "#4BACC6"     // Light Blue Accent
-            33 -> "#9BBB59"     // Light Green Accent
-            34 -> "#F79646"     // Orange
-            35 -> "#8064A2"     // Lavender
-            36 -> "#4F81BD"     // Steel Blue
-            37 -> "#B2DF8A"     // Pale Green
-            38 -> "#FFCCCC"     // Light Pink
-            39 -> "#D9D9D9"     // Light Gray
-            40 -> "#A6A6A6"     // Medium Gray
-            41 -> "#FFFF99"     // Pale Yellow
-            42 -> "#99CCFF"     // Sky Blue
-            43 -> "#FF9999"     // Rose
-            44 -> "#99FF99"     // Light Green
-            45 -> "#FFCC99"     // Peach
-            46 -> "#CC99FF"     // Light Purple
-            47 -> "#FF6666"     // Salmon
-            48 -> "#66CCFF"     // Light Sky Blue
-            49 -> "#66FF66"     // Bright Green
-            50 -> "#FFFF66"     // Bright Yellow
-
-            // System colors
-            64 -> "#000000"     // System foreground
-            65 -> "#FFFFFF"     // System background
-
-            else -> {
-                Log.w(TAG, "🎨 Unknown color index: $colorIndex, using black")
-                "#000000"
-            }
-        }
-
-        Log.d(TAG, "🎨 Index $colorIndex → $hexColor")
-        return hexColor
-    }
     private fun extractBorderStyleForSide(cellStyle: CellStyle, side: String): Int {
         return try {
             val borderStyle = when (side) {
@@ -511,40 +313,6 @@ class ExcelToLuckysheetConverter {
             } ?: 1
         } catch (e: Exception) {
             1
-        }
-    }
-
-    private fun extractXSSFColorToHexSafe(xssfColor: XSSFColor): String {
-        Log.d("deneme","2")
-        return try {
-            try {
-                val rgbField = xssfColor.javaClass.getDeclaredField("rgb")
-                rgbField.isAccessible = true
-                val rgbBytes = rgbField.get(xssfColor) as? ByteArray
-
-                if (rgbBytes != null && rgbBytes.size >= 3) {
-                    val r = rgbBytes[0].toInt() and 0xFF
-                    val g = rgbBytes[1].toInt() and 0xFF
-                    val b = rgbBytes[2].toInt() and 0xFF
-                    Log.d("deneme",String.format("#%02X%02X%02X", r, g, b))
-                    return String.format("#%02X%02X%02X", r, g, b)
-                }
-            } catch (e: Exception) {
-
-            }
-            // Method 2: Indexed color fallback
-            try {
-                Log.d("deneme","3")
-                val indexed = xssfColor.indexed
-                if (indexed >= 0) {
-                    return getColorFromIndex(indexed.toInt()) ?: "#000000"
-                }
-            } catch (e: Exception) {
-                // Indexed access failed
-            }
-            "#000000"
-        } catch (e: Exception) {
-            "#000000"
         }
     }
     private fun hasFormula(cell: XSSFCell): Boolean {
@@ -671,126 +439,6 @@ class ExcelToLuckysheetConverter {
                 LuckysheetCellType("General", LuckysheetConstants.TYPE_BOOLEAN)
             else ->
                 LuckysheetCellType("General", LuckysheetConstants.TYPE_GENERAL)
-        }
-    }
-
-    private fun extractFontColor(font: XSSFFont?): String? {
-        return try {
-            if (font == null) return "#000000"
-            try {
-                val xssfColor = font.xssfColor
-                if (xssfColor != null) {
-                    return extractXSSFColorToHexSafe(xssfColor)
-                }
-            } catch (e: Exception) {
-            }
-            val colorIndex = try {
-                font.color.toInt()
-            } catch (e: Exception) {
-                0
-            }
-            return getColorFromIndex(colorIndex) ?: "#000000"
-        } catch (e: Exception) {
-            "#000000"
-        }
-    }
-
-    private fun extractBackgroundColor(cellStyle: XSSFCellStyle?): String? {
-        return try {
-            if (cellStyle == null) return null
-
-            val fillPattern = cellStyle.fillPattern
-            if (fillPattern == FillPatternType.SOLID_FOREGROUND) {
-
-
-                try {
-                    val xssfColor = cellStyle.fillForegroundColorColor as? XSSFColor
-                    if (xssfColor != null) {
-                        val colorHex = extractXSSFColorToHexSafe(xssfColor)
-
-                        if (colorHex != "#FFFFFF") {
-                            return colorHex
-                        }
-                    }
-                } catch (e: Exception) {
-                }
-                val colorIndex = try {
-                    cellStyle.fillForegroundColor.toInt()
-                } catch (e: Exception) {
-                    null
-                }
-
-                if (colorIndex != null) {
-                    val indexColor = getColorFromIndex(colorIndex)
-                    if (indexColor != null && indexColor != "#FFFFFF") {
-                        return indexColor
-                    }
-                }
-            }
-
-            return null
-        } catch (e: Exception) {
-            return null
-        }
-    }
-
-
-    private fun getColorFromIndex(colorIndex: Int): String? {
-        return when (colorIndex) {
-            0 -> "#000000"   // Auto/Black
-            1 -> "#000000"   // Black
-            2 -> "#FFFFFF"   // White
-            3 -> "#FF0000"   // Red
-            4 -> "#00FF00"   // Green
-            5 -> "#0000FF"   // Blue
-            6 -> "#FFFF00"   // Yellow
-            7 -> "#FF00FF"   // Magenta
-            8 -> "#000000"   // Cyan
-            9 -> "#800000"   // Dark Red
-            10 -> "#008000"  // Dark Green
-            11 -> "#000080"  // Dark Blue
-            12 -> "#808000"  // Olive
-            13 -> "#800080"  // Purple
-            14 -> "#008080"  // Teal
-            15 -> "#C0C0C0"  // Silver
-            16 -> "#808080"  // Gray
-            17 -> "#9999FF"  // Light Blue
-            18 -> "#993366"  // Dark Pink
-            19 -> "#FFFFCC"  // Light Yellow
-            20 -> "#CCFFFF"  // Light Cyan
-            21 -> "#660066"  // Dark Purple
-            22 -> "#FF8080"  // Light Red
-            23 -> "#0066CC"  // Medium Blue
-            24 -> "#CCCCFF"  // Very Light Blue
-            25 -> "#000080"  // Navy Blue
-            26 -> "#FF0000"  // Red Accent
-            27 -> "#00B050"  // Green Accent
-            28 -> "#0070C0"  // Blue Accent
-            29 -> "#FFC000"  // Orange Accent
-            30 -> "#7030A0"  // Purple Accent
-            31 -> "#C5504B"  // Dark Red Accent
-            32 -> "#4BACC6"  // Light Blue Accent
-            33 -> "#9BBB59"  // Light Green Accent
-            34 -> "#F79646"  // Orange
-            35 -> "#8064A2"  // Lavender
-            36 -> "#4F81BD"  // Steel Blue
-            37 -> "#B2DF8A"  // Pale Green
-            38 -> "#FFCCCC"  // Light Pink
-            39 -> "#D9D9D9"  // Light Gray
-            40 -> "#A6A6A6"  // Medium Gray
-            41 -> "#FFFF99"  // Pale Yellow
-            42 -> "#99CCFF"  // Sky Blue
-            43 -> "#FF9999"  // Rose
-            44 -> "#99FF99"  // Light Green
-            45 -> "#FFCC99"  // Peach
-            46 -> "#CC99FF"  // Light Purple
-            47 -> "#FF6666"  // Salmon
-            48 -> "#66CCFF"  // Light Sky Blue
-            49 -> "#66FF66"  // Bright Green
-            50 -> "#FFFF66"  // Bright Yellow
-            64 -> "#000000"  // System foreground
-            65 -> "#FFFFFF"  // System background
-            else -> null
         }
     }
 

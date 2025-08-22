@@ -215,26 +215,15 @@ class LuckysheetToExcelConverter {
             else -> BorderStyle.THIN
         }
 
-        val xssfColor = hexToXSSFColor(color)
-
         when (borderSide) {
-            "top" -> {
-                cellStyle.borderTop = borderStyle
-                xssfColor?.let { cellStyle.setTopBorderColor(it) }
-            }
-            "bottom" -> {
-                cellStyle.borderBottom = borderStyle
-                xssfColor?.let { cellStyle.setBottomBorderColor(it) }
-            }
-            "left" -> {
-                cellStyle.borderLeft = borderStyle
-                xssfColor?.let { cellStyle.setLeftBorderColor(it) }
-            }
-            "right" -> {
-                cellStyle.borderRight = borderStyle
-                xssfColor?.let { cellStyle.setRightBorderColor(it) }
-            }
+            "top" -> cellStyle.borderTop = borderStyle
+            "bottom" -> cellStyle.borderBottom = borderStyle
+            "left" -> cellStyle.borderLeft = borderStyle
+            "right" -> cellStyle.borderRight = borderStyle
         }
+
+        // ✅ Border color using utils
+        ExcelColorUtils.applyBorderColor(cellStyle, color, borderSide)
 
         cell.cellStyle = cellStyle
     }
@@ -320,34 +309,11 @@ class LuckysheetToExcelConverter {
             cellStyle.borderTop = borderStyle
             cellStyle.borderBottom = borderStyle
 
-            val xssfColor = hexToXSSFColor(color)
-            Log.d(TAG, "Converted color $color to XSSFColor: ${xssfColor != null}")
-            if (xssfColor != null) {
-                cellStyle.setLeftBorderColor(xssfColor)
-                cellStyle.setRightBorderColor(xssfColor)
-                cellStyle.setTopBorderColor(xssfColor)
-                cellStyle.setBottomBorderColor(xssfColor)
-                Log.d(TAG, "✅ Applied XSSFColor to borders")
-            }
+            // ✅ Border color using utils
+            ExcelColorUtils.applyBorderColor(cellStyle, color, "all")
         }
 
         cell.cellStyle = cellStyle
-    }
-    private fun hexToXSSFColor(hex: String): XSSFColor? {
-        return try {
-            val cleanHex = hex.removePrefix("#").uppercase()
-            if (cleanHex.length != 6) return null
-
-            val rgb = ByteArray(3)
-            rgb[0] = cleanHex.substring(0, 2).toInt(16).toByte()
-            rgb[1] = cleanHex.substring(2, 4).toInt(16).toByte()
-            rgb[2] = cleanHex.substring(4, 6).toInt(16).toByte()
-
-            XSSFColor(rgb, null) // AWT-free!
-        } catch (e: Exception) {
-            Log.w(TAG, "Could not parse color: $hex", e)
-            null
-        }
     }
 
     private fun parseMergeFromConfig(config: LuckysheetConfig?): List<LuckysheetMerge> {
@@ -478,43 +444,29 @@ class LuckysheetToExcelConverter {
 
         val style = workbook.createCellStyle()
         val font = workbook.createFont()
+
+        // ✅ Font properties
         cellValue.ff?.let { font.fontName = it }
         cellValue.fs?.let { fontSize ->
             if (fontSize > 0) {
                 font.fontHeightInPoints = fontSize.toShort()
             }
         }
-        cellValue.fc?.let { color ->
-            try {
-                val xssfColor = parseColor(color)
-                xssfColor?.let { validColor ->
-                    font.setColor(validColor)
-                }
-            } catch (e: Exception) {
-                Log.w(TAG, "Could not parse font color: $color", e)
-            }
-        }
 
+        // ✅ Font color using utils
+        SimpleFontColorUtils.applyFontColorSimple(font, cellValue.fc)
+
+        // ✅ Font styles
         if (cellValue.bl == 1) font.bold = true
         if (cellValue.it == 1) font.italic = true
         if (cellValue.cl == 1) font.underline = Font.U_SINGLE
 
         style.setFont(font)
 
-        // Background color
-        cellValue.bg?.let { backgroundColor ->
-            try {
-                val xssfColor = parseColor(backgroundColor)
-                xssfColor?.let { validColor ->
-                    style.setFillForegroundColor(validColor)
-                    style.fillPattern = FillPatternType.SOLID_FOREGROUND
-                }
-            } catch (e: Exception) {
-                Log.w(TAG, "Could not parse background color: $backgroundColor", e)
-            }
-        }
+        // ✅ Background color using utils
+        ExcelColorUtils.applyBackgroundColor(style, cellValue.bg)
 
-        // Alignment
+        // ✅ Alignment (same as before)
         cellValue.ht?.let { horizontalAlign ->
             style.alignment = when (horizontalAlign) {
                 LuckysheetConstants.ALIGN_LEFT -> HorizontalAlignment.LEFT
@@ -533,7 +485,7 @@ class LuckysheetToExcelConverter {
             }
         }
 
-        // Number format
+        //  Number format
         cellValue.ct?.let { cellType ->
             when (cellType.fa) {
                 "0.00%" -> {
@@ -585,23 +537,6 @@ class LuckysheetToExcelConverter {
                 cellValue.ht != null ||
                 cellValue.vt != null ||
                 cellValue.ct?.fa != "General"
-    }
-
-    private fun parseColor(colorString: String): XSSFColor? {
-        return try {
-            val cleanColor = colorString.removePrefix("#")
-            if (cleanColor.length == 6) {
-                val r = cleanColor.substring(0, 2).toInt(16).toByte()
-                val g = cleanColor.substring(2, 4).toInt(16).toByte()
-                val b = cleanColor.substring(4, 6).toInt(16).toByte()
-                XSSFColor(byteArrayOf(r, g, b), null)
-            } else {
-                null
-            }
-        } catch (e: Exception) {
-            Log.w(TAG, "Could not parse color: $colorString", e)
-            null
-        }
     }
 
     private fun isDateString(value: String): Boolean {
