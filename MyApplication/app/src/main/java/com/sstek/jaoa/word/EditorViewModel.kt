@@ -78,6 +78,31 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    fun saveToInternalStorageWithName(fileName: String) {
+        val html = htmlContent.value
+        if (html.isNullOrEmpty()) return
+
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                // Dosya uzantısı otomatik .docx olsun
+                val finalName = if (fileName.endsWith(".docx")) fileName else "$fileName.docx"
+                val file = File(getApplication<Application>().filesDir, finalName)
+
+                // HTML’i DOCX’e dönüştür
+                val doc = convertHtmlToXwpf(getApplication(), html)
+                file.outputStream().use { doc.write(it) }
+
+                _selectedFileUri.value = Uri.fromFile(file)
+                _toastMessage.emit("Dosya başarıyla kaydedildi: $finalName")
+            } catch (e: Exception) {
+                e.printStackTrace()
+                _toastMessage.emit("Dosya kaydedilirken hata oluştu: ${e.message}")
+            }
+        }
+    }
+
+
+
 
     fun saveHtmlAsDocx(html: String) {
         if (_isLoading.value) {

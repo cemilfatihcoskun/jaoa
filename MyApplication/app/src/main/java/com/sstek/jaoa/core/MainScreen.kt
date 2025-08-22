@@ -3,6 +3,7 @@ package com.sstek.jaoa.core
 import android.annotation.SuppressLint
 import android.net.Uri
 import android.util.Log
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -48,10 +49,8 @@ fun MainScreen(
 
     val updateFiles: () -> Unit = {
         val allFiles = if (selectedTabIndex == 0) {
-            // Internal storage
             getInternalFiles(context, extensions)
         } else {
-            // External storage
             getExternalFiles(context, extensions)
         }
 
@@ -194,7 +193,8 @@ fun MainScreen(
                         uri,
                         onOpenFile,
                         expandedMenuState = { expandedMenu = it },
-                        isInternal = selectedTabIndex == 0
+                        isInternal = selectedTabIndex == 0,
+                        updateFiles
                     )
                 }
             }
@@ -210,10 +210,44 @@ fun FileCard(
     uri: Uri,
     onOpenFile: (FileType, Uri) -> Unit,
     expandedMenuState: (Boolean) -> Unit,
-    isInternal: Boolean = false
+    isInternal: Boolean = false,
+    updateFiles: () -> Unit
 ) {
     var expandedMenu by remember { mutableStateOf(false) }
     val context = LocalContext.current
+
+    var showRenameDialog by remember { mutableStateOf(false) }
+    var newName by remember { mutableStateOf(name) }
+
+    if (showRenameDialog) {
+        AlertDialog(
+            onDismissRequest = { showRenameDialog = false },
+            title = { Text("Dosyayı Yeniden Adlandır") },
+            text = {
+                TextField(
+                    value = newName,
+                    onValueChange = { newName = it },
+                    label = { Text("Yeni isim") },
+                    singleLine = true
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    renameFile(context, uri, newName)
+                    showRenameDialog = false
+                    updateFiles()
+                    Toast.makeText(context, "Dosya yeniden adlandırıldı", Toast.LENGTH_SHORT).show()
+                }) {
+                    Text("Tamam")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRenameDialog = false }) {
+                    Text("İptal")
+                }
+            }
+        )
+    }
 
     Card(
         modifier = Modifier
@@ -249,7 +283,7 @@ fun FileCard(
                         text = { Text("Yeniden Adlandır") },
                         onClick = {
                             expandedMenu = false
-                            renameFile(context, uri)
+                            showRenameDialog = true
                         }
                     )
                     DropdownMenuItem(
@@ -264,6 +298,7 @@ fun FileCard(
                         onClick = {
                             expandedMenu = false
                             deleteFile(context, uri)
+                            updateFiles()
                         }
                     )
                 }

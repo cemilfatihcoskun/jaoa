@@ -10,36 +10,29 @@ import android.widget.Toast
 import java.io.File
 
 // Ortak dosya silme
-fun deleteFile(context: android.content.Context, uri: Uri) {
-    try {
-        val file = File(uri.path!!)
-        if (file.exists() && file.delete()) {
-            Toast.makeText(context, "Dosya silindi", Toast.LENGTH_SHORT).show()
-        } else {
-            // MediaStore ile silme deneyelim
-            context.contentResolver.delete(uri, null, null)
-            Toast.makeText(context, "Dosya silindi (MediaStore)", Toast.LENGTH_SHORT).show()
-        }
-    } catch (e: Exception) {
-        Toast.makeText(context, "Dosya silinemedi: ${e.message}", Toast.LENGTH_SHORT).show()
+fun deleteFile(context: Context, uri: Uri) {
+    val file = File(uri.path!!)
+    if (file.exists() && file.delete()) {
+        Log.d("FileUtils", "Dosya silindi.")
+    } else {
+        Log.d("FileUtils", "Dosya silinemedi.")
     }
 }
 
+
 // Ortak yeniden adlandırma
-fun renameFile(context: android.content.Context, uri: Uri) {
+fun renameFile(context: Context, uri: Uri, newName: String) {
     val file = File(uri.path!!)
     if (!file.exists()) return
 
-    // Burada dialog yerine sabit isim, istersen Compose dialog ekleyebilirsin
-    val newName = "yeni_ad.docx"
     val newFile = File(file.parentFile, newName)
-
     if (file.renameTo(newFile)) {
-        Toast.makeText(context, "Dosya yeniden adlandırıldı", Toast.LENGTH_SHORT).show()
+        Log.d("FileUtils", "Dosya yeniden adlandırıldı: ${file.name} -> $newName")
     } else {
-        Toast.makeText(context, "Yeniden adlandırma başarısız", Toast.LENGTH_SHORT).show()
+        Log.d("FileUtils", "Yeniden adlandırma başarısız")
     }
 }
+
 
 // Ortak paylaşma
 fun shareFile(context: android.content.Context, uri: Uri) {
@@ -170,7 +163,17 @@ fun getAllFilesByExtensions(context: Context, extensions: List<FileType>): List<
     return if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.S) {
         getDocxFilesWithFileApi(context, extensions)
     } else {
-        getDocxFilesWithMediaStore(context, extensions)
+        getDocxFilesWithFileApi(context, extensions)
     }
 }
 
+fun saveToInternalStorage(context: Context, fileName: String, content: String): Uri? {
+    return try {
+        val file = File(context.filesDir, fileName)
+        file.outputStream().use { it.write(content.toByteArray()) }
+        androidx.core.content.FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+    } catch (e: Exception) {
+        e.printStackTrace()
+        null
+    }
+}
