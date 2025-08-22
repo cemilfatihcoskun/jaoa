@@ -42,18 +42,34 @@ fun MainScreen(
     var showNewFileMenu by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
     var selectedFilter by remember { mutableStateOf<FileType?>(null) } // null = tümü
-
-    val filePickerLauncher = rememberFilePickerLauncher(context, mutableStateOf(files), onOpenFile)
-
-    if (!CheckStoragePermissionWithExplanation()) {
-        Log.d("MainScreen", "Give storage permission for all documents and files.")
-    }
+    var selectedTabIndex by remember { mutableStateOf(0) } // 0 = Internal, 1 = External
 
     val extensions = listOf(FileType.DOCX, FileType.XLSX)
-    val allFiles = getAllFilesByExtensions(context, extensions)
-    files = allFiles.filter { (name, _) ->
-        (searchQuery.isBlank() || name.contains(searchQuery, ignoreCase = true)) &&
-                (selectedFilter == null || FileType.fromFileName(name) == selectedFilter)
+
+    val updateFiles: () -> Unit = {
+        val allFiles = if (selectedTabIndex == 0) {
+            // Internal storage
+            getInternalFiles(context, extensions)
+        } else {
+            // External storage
+            getExternalFiles(context, extensions)
+        }
+
+        files = allFiles.filter { (name, _) ->
+            (searchQuery.isBlank() || name.contains(searchQuery, ignoreCase = true)) &&
+                    (selectedFilter == null || FileType.fromFileName(name) == selectedFilter)
+        }
+    }
+
+    val filePickerLauncher = rememberFilePickerLauncher(
+        context,
+        mutableStateOf(files),
+        onOpenFile
+    )
+
+    // Dosyaları güncelle
+    LaunchedEffect(selectedTabIndex, searchQuery, selectedFilter) {
+        updateFiles()
     }
 
     JAOATheme {
@@ -61,10 +77,21 @@ fun MainScreen(
             topBar = {
                 Column(
                     modifier = Modifier
-                        //.background(MaterialTheme.colorScheme.primary) // üst bar rengi
-                        .statusBarsPadding() // status barın altından başlasın
+                        .statusBarsPadding()
                         .padding(8.dp)
                 ) {
+                    // TabRow: Internal / External
+                    val tabs = listOf("İç Depolama", "Dış Depolama")
+                    TabRow(selectedTabIndex = selectedTabIndex) {
+                        tabs.forEachIndexed { index, title ->
+                            Tab(
+                                selected = selectedTabIndex == index,
+                                onClick = { selectedTabIndex = index },
+                                text = { Text(title) }
+                            )
+                        }
+                    }
+
                     // Search bar
                     OutlinedTextField(
                         value = searchQuery,
@@ -73,7 +100,7 @@ fun MainScreen(
                             .fillMaxWidth()
                             .padding(top = 8.dp, bottom = 4.dp),
                         placeholder = { Text("Ara...") },
-                        shape = RoundedCornerShape(30), // yuvarlak
+                        shape = RoundedCornerShape(30),
                         singleLine = true
                     )
 
@@ -92,13 +119,13 @@ fun MainScreen(
                         )
                         FilterButton(
                             label = "Docx",
-                            icon = Icons.Default.Description, // DOCX için uygun ikon ekleyebilirsin
+                            icon = Icons.Default.Description,
                             isSelected = selectedFilter == FileType.DOCX,
                             onClick = { selectedFilter = FileType.DOCX }
                         )
                         FilterButton(
                             label = "Xlsx",
-                            icon = Icons.Default.TableChart, // XLSX için uygun ikon ekle
+                            icon = Icons.Default.TableChart,
                             isSelected = selectedFilter == FileType.XLSX,
                             onClick = { selectedFilter = FileType.XLSX }
                         )
@@ -109,7 +136,12 @@ fun MainScreen(
                 Column {
                     FloatingActionButton(
                         onClick = {
-                            filePickerLauncher.launch(arrayOf("application/vnd.openxmlformats-officedocument.wordprocessingml.document"))
+                            // Sadece external storage için dosya picker
+                            if (selectedTabIndex == 1) {
+                                // MIME tipini DOCX ile sınırla
+
+                                filePickerLauncher.launch(arrayOf("application/vnd.openxmlformats-officedocument.wordprocessingml.document"))
+                            }
                         },
                         modifier = Modifier.padding(bottom = 16.dp)
                     ) {
@@ -156,80 +188,93 @@ fun MainScreen(
                     .padding(padding)
             ) {
                 items(files) { (name, uri) ->
-                    var expandedMenu by remember { mutableStateOf(false) } // üç nokta menüsü
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                            .clickable {
-                                val fileType = FileType.fromFileName(name)
-                                onOpenFile(fileType, uri)
-                            }
-                            .border(
-                                width = 1.dp,
-                                color = MaterialTheme.colorScheme.outline,
-                                shape = RoundedCornerShape(12.dp)
-                            ),
-                        shape = RoundedCornerShape(12.dp),
-                        elevation = CardDefaults.cardElevation(2.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surface
-                        )
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                        ) {
-                            // Dosya adı
-                            Text(
-                                text = name,
-                                modifier = Modifier.weight(1f),
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-
-                            // 3 nokta menüsü
-                            Box() {
-                                IconButton(onClick = { expandedMenu = true }) {
-                                    Icon(
-                                        imageVector = Icons.Default.MoreVert,
-                                        contentDescription = "Daha fazla"
-                                    )
-                                }
-
-                                DropdownMenu(
-                                    expanded = expandedMenu,
-                                    onDismissRequest = { expandedMenu = false }
-                                ) {
-                                    DropdownMenuItem(
-                                        text = { Text("Yeniden Adlandır") },
-                                        onClick = {
-                                            expandedMenu = false
-                                            // Yeniden adlandırma işlemini burada yap
-                                        }
-                                    )
-                                    DropdownMenuItem(
-                                        text = { Text("Paylaş") },
-                                        onClick = {
-                                            expandedMenu = false
-                                            // Paylaşma işlemini burada yap
-                                        }
-                                    )
-                                    DropdownMenuItem(
-                                        text = { Text("Sil") },
-                                        onClick = {
-                                            expandedMenu = false
-                                            // Silme işlemini burada yap
-                                        }
-                                    )
-                                }
-                            }
-                        }
-                    }
+                    var expandedMenu by remember { mutableStateOf(false) }
+                    FileCard(
+                        name,
+                        uri,
+                        onOpenFile,
+                        expandedMenuState = { expandedMenu = it },
+                        isInternal = selectedTabIndex == 0
+                    )
                 }
             }
         }
     }
 }
+
+
+
+@Composable
+fun FileCard(
+    name: String,
+    uri: Uri,
+    onOpenFile: (FileType, Uri) -> Unit,
+    expandedMenuState: (Boolean) -> Unit,
+    isInternal: Boolean = false
+) {
+    var expandedMenu by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp, vertical = 4.dp)
+            .clickable {
+                val fileType = FileType.fromFileName(name)
+                onOpenFile(fileType, uri)
+            }
+            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(12.dp)),
+        shape = RoundedCornerShape(12.dp),
+        elevation = CardDefaults.cardElevation(2.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+        ) {
+            Text(
+                text = name,
+                modifier = Modifier.weight(1f),
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Box {
+                IconButton(onClick = { expandedMenu = true; expandedMenuState(true) }) {
+                    Icon(Icons.Default.MoreVert, contentDescription = "Daha fazla")
+                }
+                DropdownMenu(
+                    expanded = expandedMenu,
+                    onDismissRequest = { expandedMenu = false; expandedMenuState(false) }
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("Yeniden Adlandır") },
+                        onClick = {
+                            expandedMenu = false
+                            renameFile(context, uri)
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Paylaş") },
+                        onClick = {
+                            expandedMenu = false
+                            shareFile(context, uri)
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Sil") },
+                        onClick = {
+                            expandedMenu = false
+                            deleteFile(context, uri)
+                        }
+                    )
+                }
+            }
+        }
+    }
+}
+
+
+
+
 
 @Composable
 fun FilterButton(label: String, icon: ImageVector, isSelected: Boolean, onClick: () -> Unit) {

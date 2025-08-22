@@ -9,6 +9,76 @@ import android.util.Log
 import android.widget.Toast
 import java.io.File
 
+// Ortak dosya silme
+fun deleteFile(context: android.content.Context, uri: Uri) {
+    try {
+        val file = File(uri.path!!)
+        if (file.exists() && file.delete()) {
+            Toast.makeText(context, "Dosya silindi", Toast.LENGTH_SHORT).show()
+        } else {
+            // MediaStore ile silme deneyelim
+            context.contentResolver.delete(uri, null, null)
+            Toast.makeText(context, "Dosya silindi (MediaStore)", Toast.LENGTH_SHORT).show()
+        }
+    } catch (e: Exception) {
+        Toast.makeText(context, "Dosya silinemedi: ${e.message}", Toast.LENGTH_SHORT).show()
+    }
+}
+
+// Ortak yeniden adlandırma
+fun renameFile(context: android.content.Context, uri: Uri) {
+    val file = File(uri.path!!)
+    if (!file.exists()) return
+
+    // Burada dialog yerine sabit isim, istersen Compose dialog ekleyebilirsin
+    val newName = "yeni_ad.docx"
+    val newFile = File(file.parentFile, newName)
+
+    if (file.renameTo(newFile)) {
+        Toast.makeText(context, "Dosya yeniden adlandırıldı", Toast.LENGTH_SHORT).show()
+    } else {
+        Toast.makeText(context, "Yeniden adlandırma başarısız", Toast.LENGTH_SHORT).show()
+    }
+}
+
+// Ortak paylaşma
+fun shareFile(context: android.content.Context, uri: Uri) {
+    val file = File(uri.path!!)
+    if (!file.exists()) return
+
+    val fileUri = androidx.core.content.FileProvider.getUriForFile(
+        context,
+        "${context.packageName}.fileprovider",
+        file
+    )
+    val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+        type = "*/*"
+        putExtra(android.content.Intent.EXTRA_STREAM, fileUri)
+        addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    }
+    context.startActivity(android.content.Intent.createChooser(intent, "Dosya paylaş"))
+}
+
+// Internal storage için FileUtils wrapper
+fun getInternalFiles(context: Context, extensions: List<FileType>): List<Pair<String, Uri>> {
+    // Internal sadece app-specific directories
+    val internalDirs = listOf(context.filesDir, context.cacheDir)
+    val fileList = mutableListOf<Pair<String, Uri>>()
+    internalDirs.forEach { dir ->
+        dir.walkTopDown().forEach { file ->
+            if (file.isFile && extensions.any { file.name.endsWith(".${it.extension}", ignoreCase = true) }) {
+                fileList += file.name to Uri.fromFile(file)
+            }
+        }
+    }
+    return fileList
+}
+
+// External storage için mevcut FileUtils fonksiyonunu kullan
+fun getExternalFiles(context: Context, extensions: List<FileType>): List<Pair<String, Uri>> {
+    return getAllFilesByExtensions(context, extensions)
+}
+
 fun isNotTrashed(file: File): Boolean {
     val path = file.absolutePath.lowercase()
     val name = file.name.lowercase()
