@@ -111,9 +111,9 @@ class LuckysheetToExcelConverter {
 
                 val borderType = borderJson.get("borderType")?.asString ?: "border-all"
                 val color = borderJson.get("color")?.asString ?: "#000000"
-                val style = borderJson.get("style")?.asString ?: "1"
+                val style = borderJson.get("style")?.asInt ?: 1
 
-                Log.d(TAG, "Processing border: type=$borderType, color=$color, style=$style")
+                Log.d(TAG, "Processing border: type=$borderType, color=$color, style=$style (int)")
 
                 val rangeArray = borderJson.get("range")?.asJsonArray
                 rangeArray?.forEach { rangeElement ->
@@ -198,7 +198,7 @@ class LuckysheetToExcelConverter {
     }
 
     private fun applySpecificBorderSide(sheet: XSSFSheet, row: Int, col: Int, workbook: XSSFWorkbook,
-                                        color: String, style: String, borderSide: String) {
+                                        color: String, style: Int, borderSide: String) {
         val excelRow = sheet.getRow(row) ?: sheet.createRow(row)
         val cell = excelRow.getCell(col) ?: excelRow.createCell(col)
 
@@ -206,14 +206,27 @@ class LuckysheetToExcelConverter {
         cellStyle.cloneStyleFrom(cell.cellStyle)
 
         val borderStyle = when (style) {
-            "0" -> BorderStyle.NONE
-            "1" -> BorderStyle.THIN
-            "2" -> BorderStyle.THICK
-            "3" -> BorderStyle.DASHED
-            "4" -> BorderStyle.DOTTED
-            "5" -> BorderStyle.DOUBLE
-            else -> BorderStyle.THIN
+            0 -> BorderStyle.NONE
+            1 -> BorderStyle.THIN
+            2 -> BorderStyle.HAIR
+            3 -> BorderStyle.DOTTED
+            4 -> BorderStyle.DASHED
+            5 -> BorderStyle.DASH_DOT
+            6 -> BorderStyle.DASH_DOT_DOT
+            7 -> BorderStyle.DOUBLE
+            8 -> BorderStyle.MEDIUM
+            9 -> BorderStyle.MEDIUM_DASHED
+            10 -> BorderStyle.MEDIUM_DASH_DOT
+            11 -> BorderStyle.MEDIUM_DASH_DOT_DOT
+            12 -> BorderStyle.SLANTED_DASH_DOT
+            13 -> BorderStyle.THICK
+            else -> {
+                Log.w(TAG, "Unknown Luckysheet border style: $style for $borderSide, using THIN")
+                BorderStyle.THIN
+            }
         }
+
+        Log.d(TAG, "✅ Applying $borderSide border - Luckysheet style $style → POI $borderStyle")
 
         when (borderSide) {
             "top" -> cellStyle.borderTop = borderStyle
@@ -246,7 +259,7 @@ class LuckysheetToExcelConverter {
 
 
     private fun applyOutsideBorder(sheet: XSSFSheet, startRow: Int, endRow: Int, startCol: Int, endCol: Int,
-                                   workbook: XSSFWorkbook, color: String, style: String) {
+                                   workbook: XSSFWorkbook, color: String, style: Int) {
         // Üst border
         for (c in startCol..endCol) {
             applySpecificBorderSide(sheet, startRow, c, workbook, color, style, "top")
@@ -266,7 +279,7 @@ class LuckysheetToExcelConverter {
     }
 
     private fun applyInsideBorder(sheet: XSSFSheet, startRow: Int, endRow: Int, startCol: Int, endCol: Int,
-                                  workbook: XSSFWorkbook, color: String, style: String) {
+                                  workbook: XSSFWorkbook, color: String, style: Int) {
 
         for (r in (startRow + 1)..endRow) {
             for (c in startCol..endCol) {
@@ -281,7 +294,7 @@ class LuckysheetToExcelConverter {
         }
     }
 
-    private fun applyCellBorder(sheet: XSSFSheet, row: Int, col: Int, workbook: XSSFWorkbook, color: String, style: String) {
+    private fun applyCellBorder(sheet: XSSFSheet, row: Int, col: Int, workbook: XSSFWorkbook, color: String, style: Int) {
         val excelRow = sheet.getRow(row) ?: sheet.createRow(row)
         val cell = excelRow.getCell(col) ?: excelRow.createCell(col)
 
@@ -289,15 +302,28 @@ class LuckysheetToExcelConverter {
         cellStyle.cloneStyleFrom(cell.cellStyle)
 
         val borderStyle = when (style) {
-            "0" -> BorderStyle.NONE
-            "1" -> BorderStyle.THIN
-            "2" -> BorderStyle.THICK
-            "3" -> BorderStyle.DASHED
-            "4" -> BorderStyle.DOTTED
-            "5" -> BorderStyle.DOUBLE
-            else -> BorderStyle.THIN
+            0 -> BorderStyle.NONE                    // None
+            1 -> BorderStyle.THIN                    // Thin (default)
+            2 -> BorderStyle.HAIR                    // Hair (very thin)
+            3 -> BorderStyle.DOTTED                  // Dotted
+            4 -> BorderStyle.DASHED                  // Dashed
+            5 -> BorderStyle.DASH_DOT                // DashDot
+            6 -> BorderStyle.DASH_DOT_DOT           // DashDotDot
+            7 -> BorderStyle.DOUBLE                  // Double
+            8 -> BorderStyle.MEDIUM                  // Medium
+            9 -> BorderStyle.MEDIUM_DASHED          // MediumDashed
+            10 -> BorderStyle.MEDIUM_DASH_DOT       // MediumDashDot
+            11 -> BorderStyle.MEDIUM_DASH_DOT_DOT   // MediumDashDotDot
+            12 -> BorderStyle.SLANTED_DASH_DOT      // SlantedDashDot
+            13 -> BorderStyle.THICK                 // Thick
+            else -> {
+                Log.w(TAG, "Unknown Luckysheet border style: $style, using THIN as fallback")
+                BorderStyle.THIN
+            }
         }
-        Log.d(TAG, "Applying border - color: $color, style: $style to cell ($row,$col)")
+
+        Log.d(TAG, "✅ Luckysheet style $style → POI $borderStyle for cell ($row,$col)")
+
         if (borderStyle == BorderStyle.NONE) {
             cellStyle.borderLeft = BorderStyle.NONE
             cellStyle.borderRight = BorderStyle.NONE
@@ -445,12 +471,22 @@ class LuckysheetToExcelConverter {
         val style = workbook.createCellStyle()
         val font = workbook.createFont()
 
-        // ✅ Font properties
-        cellValue.ff?.let { font.fontName = it }
-        cellValue.fs?.let { fontSize ->
-            if (fontSize > 0) {
-                font.fontHeightInPoints = fontSize.toShort()
+
+        cellValue.ff?.let { fontFamily ->
+            if (fontFamily.isNotBlank()) {
+                font.fontName = fontFamily
             }
+        }
+        cellValue.fs?.let { fontSize ->
+            val validatedSize = when {
+                fontSize <= 0 -> 11
+                fontSize > 72 -> 72
+                fontSize < 6 -> 6
+                else -> fontSize
+            }
+
+            Log.d(TAG, "Setting font size: original=$fontSize, validated=$validatedSize")
+            font.fontHeightInPoints = validatedSize.toShort()
         }
 
         // ✅ Font color using utils

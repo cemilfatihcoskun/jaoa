@@ -76,7 +76,6 @@ object ExcelColorUtils {
                     if (hexColor != "#FFFFFF") hexColor else null
                 }
             }
-Log.d("deneme","null dondu")
             return null
         } catch (e: Exception) {
             Log.e(TAG, "🎨 Error extracting background color: ${e.message}")

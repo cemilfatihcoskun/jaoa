@@ -258,6 +258,18 @@ class ExcelToLuckysheetConverter {
 
             val font = xssfCell.sheet.workbook.getFontAt(cellStyle.fontIndexAsInt)
 
+            val fontSize = try {
+                val fontPoints = font.fontHeightInPoints.toInt()
+                when {
+                    fontPoints <= 0 -> 11
+                    fontPoints > 72 -> 72
+                    else -> fontPoints
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Could not get font size, using default: ${e.message}")
+                11
+            }
+
             val luckysheetValue = LuckysheetCellValue(
                 v = cellValue,
                 m = displayValue,
@@ -265,9 +277,9 @@ class ExcelToLuckysheetConverter {
                 ct = getLuckysheetCellType(xssfCell),
 
 
-                ff = font.fontName ?: "Arial",
-                fs = font.fontHeightInPoints.toInt().takeIf { it > 0 } ?: 11,
-                fc =  SimpleFontColorUtils.extractFontColorSimple(font),
+                ff = font.fontName?.takeIf { it.isNotBlank() } ?: "Arial",
+                fs = fontSize,
+                fc = SimpleFontColorUtils.extractFontColorSimple(font),
                 bl = if (font.bold) 1 else 0,
                 it = if (font.italic) 1 else 0,
                 cl = if (font.underline != Font.U_NONE) 1 else 0,
@@ -300,19 +312,31 @@ class ExcelToLuckysheetConverter {
                 else -> null
             }
 
-            borderStyle?.let {
-                when (it) {
-                    BorderStyle.NONE -> 0
-                    BorderStyle.THIN, BorderStyle.HAIR -> 1
-                    BorderStyle.THICK, BorderStyle.MEDIUM -> 2
-                    BorderStyle.DASHED, BorderStyle.MEDIUM_DASHED -> 3
-                    BorderStyle.DOTTED -> 4
-                    BorderStyle.DOUBLE -> 5
-                    else -> 1
+            borderStyle?.let { poiBorderStyle ->
+                when (poiBorderStyle) {
+                    BorderStyle.NONE -> 0                          // None
+                    BorderStyle.THIN -> 1                          // Thin
+                    BorderStyle.HAIR -> 2                          // Hair
+                    BorderStyle.DOTTED -> 3                        // Dotted
+                    BorderStyle.DASHED -> 4                        // Dashed
+                    BorderStyle.DASH_DOT -> 5                      // DashDot
+                    BorderStyle.DASH_DOT_DOT -> 6                  // DashDotDot
+                    BorderStyle.DOUBLE -> 7                        // Double
+                    BorderStyle.MEDIUM -> 8                        // Medium ← Bu doğru mapping!
+                    BorderStyle.MEDIUM_DASHED -> 9                 // MediumDashed
+                    BorderStyle.MEDIUM_DASH_DOT -> 10              // MediumDashDot
+                    BorderStyle.MEDIUM_DASH_DOT_DOT -> 11          // MediumDashDotDot
+                    BorderStyle.SLANTED_DASH_DOT -> 12             // SlantedDashDot
+                    BorderStyle.THICK -> 13                        // Thick
+                    else -> {
+                        Log.d(TAG, "Unknown POI border style: $poiBorderStyle, using Thin (1)")
+                        1
+                    }
                 }
-            } ?: 1
+            } ?: 0
         } catch (e: Exception) {
-            1
+            Log.e(TAG, "Error extracting border style for $side: ${e.message}")
+            0
         }
     }
     private fun hasFormula(cell: XSSFCell): Boolean {
