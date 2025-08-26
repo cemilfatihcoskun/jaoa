@@ -102,7 +102,7 @@ class ExcelViewModel(application: Application) : AndroidViewModel(application) {
 
                 val workbook = XSSFWorkbook(inputStream)
                 val jsonData = excelToLuckyConverter.convert(workbook)
-                Log.d("deneme",jsonData);
+                //Log.d("deneme",jsonData);
                 workbook.close()
                 inputStream.close()
 

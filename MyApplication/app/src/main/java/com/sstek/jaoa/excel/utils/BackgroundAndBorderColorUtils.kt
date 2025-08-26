@@ -151,7 +151,27 @@ object BackgroundAndBorderColorUtils {
             return null
         }
     }
+    private fun applyTintToColor(baseRgb: IntArray, tintValue: Double): String {
+        val r = if (tintValue < 0) {
+            kotlin.math.round(baseRgb[0] * (1 + tintValue)).toInt().coerceIn(0, 255)
+        } else {
+            kotlin.math.round(baseRgb[0] + (255 - baseRgb[0]) * tintValue).toInt().coerceIn(0, 255)
+        }
 
+        val g = if (tintValue < 0) {
+            kotlin.math.round(baseRgb[1] * (1 + tintValue)).toInt().coerceIn(0, 255)
+        } else {
+            kotlin.math.round(baseRgb[1] + (255 - baseRgb[1]) * tintValue).toInt().coerceIn(0, 255)
+        }
+
+        val b = if (tintValue < 0) {
+            kotlin.math.round(baseRgb[2] * (1 + tintValue)).toInt().coerceIn(0, 255)
+        } else {
+            kotlin.math.round(baseRgb[2] + (255 - baseRgb[2]) * tintValue).toInt().coerceIn(0, 255)
+        }
+
+        return String.format("#%02X%02X%02X", r, g, b)
+    }
     private fun convertXSSFColorToHex(xssfColor: XSSFColor): String {
         try {
             try {
@@ -159,12 +179,28 @@ object BackgroundAndBorderColorUtils {
                 if (ctColor != null && ctColor.isSetRgb()) {
                     val rgbBytes = ctColor.rgb
                     if (rgbBytes != null && rgbBytes.size >= 3) {
-                        val r = rgbBytes[0].toInt() and 0xFF
-                        val g = rgbBytes[1].toInt() and 0xFF
-                        val b = rgbBytes[2].toInt() and 0xFF
-                        val hexColor = String.format("#%02X%02X%02X", r, g, b)
-                        Log.d(TAG, "🎨 CTColor extraction successful: $hexColor")
-                        return hexColor
+                        val startIndex = if (rgbBytes.size == 4) 1 else 0
+                        val r = rgbBytes[startIndex].toInt() and 0xFF
+                        val g = rgbBytes[startIndex + 1].toInt() and 0xFF
+                        val b = rgbBytes[startIndex + 2].toInt() and 0xFF
+
+                        // Theme color + tint handling
+                        val finalColor = if (ctColor.isSetTheme() && ctColor.isSetTint()) {
+                            val themeIndex = ctColor.theme
+                            val tintValue = ctColor.tint
+                            Log.d(TAG, "Theme color detected: theme=$themeIndex, tint=$tintValue")
+
+                            val baseColor = intArrayOf(r, g, b)
+                            val tintedColor = applyTintToColor(baseColor, tintValue)
+                            Log.d(TAG, "Theme tint applied: base=#${String.format("%02X%02X%02X", r, g, b)}, result=$tintedColor")
+                            tintedColor
+                        } else {
+                            val hexColor = String.format("#%02X%02X%02X", r, g, b)
+                            Log.d(TAG, "CTColor extraction successful: $hexColor")
+                            hexColor
+                        }
+
+                        return finalColor
                     }
                 }
             } catch (e: Exception) {
