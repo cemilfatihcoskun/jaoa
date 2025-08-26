@@ -45,7 +45,7 @@ class LuckysheetToExcelConverter {
     private fun convertSheet(workbook: XSSFWorkbook, sheetData: LuckysheetSheet) {
         val sheet = workbook.createSheet(sheetData.name)
         val styleCache = mutableMapOf<String, XSSFCellStyle>()
-
+        Log.d(TAG, "Processing ${sheetData.celldata?.size} cells")
         sheetData.celldata?.forEach { cellInfo ->
             convertCell(sheet, cellInfo, styleCache)
         }
@@ -236,7 +236,7 @@ class LuckysheetToExcelConverter {
         }
 
         // ✅ Border color using utils
-        ExcelColorUtils.applyBorderColor(cellStyle, color, borderSide)
+        BackgroundAndBorderColorUtils.applyBorderColor(cellStyle, color, borderSide)
 
         cell.cellStyle = cellStyle
     }
@@ -336,7 +336,7 @@ class LuckysheetToExcelConverter {
             cellStyle.borderBottom = borderStyle
 
             // ✅ Border color using utils
-            ExcelColorUtils.applyBorderColor(cellStyle, color, "all")
+            BackgroundAndBorderColorUtils.applyBorderColor(cellStyle, color, "all")
         }
 
         cell.cellStyle = cellStyle
@@ -391,6 +391,7 @@ class LuckysheetToExcelConverter {
         cellInfo: LuckysheetCell,
         styleCache: MutableMap<String, XSSFCellStyle>
     ) {
+        Log.d(TAG, "Converting cell (${cellInfo.r},${cellInfo.c}): fc=${cellInfo.v.fc}, bg=${cellInfo.v.bg}")
         try {
             val row = sheet.getRow(cellInfo.r) ?: sheet.createRow(cellInfo.r)
             val cell = row.createCell(cellInfo.c)
@@ -461,10 +462,11 @@ class LuckysheetToExcelConverter {
         cellValue: LuckysheetCellValue,
         styleCache: MutableMap<String, XSSFCellStyle>
     ): XSSFCellStyle? {
-
+        Log.d(TAG, "Creating style: fc=${cellValue.fc}, bg=${cellValue.bg}")
         val styleKey = createStyleKey(cellValue)
         styleCache[styleKey]?.let { return it }
         if (!hasStyleProperties(cellValue)) {
+            Log.d(TAG, "!hasStyleProperties(cellValue) null")
             return null
         }
 
@@ -488,10 +490,10 @@ class LuckysheetToExcelConverter {
             Log.d(TAG, "Setting font size: original=$fontSize, validated=$validatedSize")
             font.fontHeightInPoints = validatedSize.toShort()
         }
-
+        Log.d(TAG, "About to apply font color: ${cellValue.fc}")
         // ✅ Font color using utils
-        SimpleFontColorUtils.applyFontColorSimple(font, cellValue.fc)
-
+        FontColorUtils.applyFontColorSimple(font, cellValue.fc)
+        Log.d(TAG, "Font color apply completed")
         // ✅ Font styles
         if (cellValue.bl == 1) font.bold = true
         if (cellValue.it == 1) font.italic = true
@@ -500,7 +502,7 @@ class LuckysheetToExcelConverter {
         style.setFont(font)
 
         // ✅ Background color using utils
-        ExcelColorUtils.applyBackgroundColor(style, cellValue.bg)
+        BackgroundAndBorderColorUtils.applyBackgroundColor(style, cellValue.bg)
 
         // ✅ Alignment (same as before)
         cellValue.ht?.let { horizontalAlign ->
@@ -548,18 +550,21 @@ class LuckysheetToExcelConverter {
     }
 
     private fun createStyleKey(cellValue: LuckysheetCellValue): String {
-        return listOfNotNull(
-            cellValue.ff,
-            cellValue.fs?.toString(),
-            cellValue.fc,
-            cellValue.bg,
-            cellValue.bl?.toString(),
-            cellValue.it?.toString(),
-            cellValue.cl?.toString(),
-            cellValue.ht?.toString(),
-            cellValue.vt?.toString(),
-            cellValue.ct?.fa
+        val key = listOf(
+            cellValue.ff ?: "null",
+            cellValue.fs?.toString() ?: "null",
+            cellValue.fc ?: "null",
+            cellValue.bg ?: "null",
+            cellValue.bl?.toString() ?: "null",
+            cellValue.it?.toString() ?: "null",
+            cellValue.cl?.toString() ?: "null",
+            cellValue.ht?.toString() ?: "null",
+            cellValue.vt?.toString() ?: "null",
+            cellValue.ct?.fa ?: "null"
         ).joinToString("|")
+
+        Log.d(TAG, "Style key for fc=${cellValue.fc}, bg=${cellValue.bg}: $key")
+        return key
     }
 
     private fun hasStyleProperties(cellValue: LuckysheetCellValue): Boolean {

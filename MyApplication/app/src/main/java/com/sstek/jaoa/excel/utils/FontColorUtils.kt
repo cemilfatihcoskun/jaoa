@@ -9,7 +9,7 @@ import org.apache.poi.xssf.usermodel.XSSFFont
  * Simple Font Color Utils - AWT-Free Final Version
  * CTColor ile güvenli RGB extraction + kendi color mapping
  */
-object SimpleFontColorUtils {
+object FontColorUtils {
 
     private const val TAG = "SimpleFontColor"
 
@@ -22,6 +22,8 @@ object SimpleFontColorUtils {
             Log.d(TAG, "🎨 Extracting font color...")
 
             val xssfFont = font as? XSSFFont ?: return null
+            Log.d(TAG, "Font details: name=${xssfFont.fontName}, color_index=${xssfFont.color}")
+            Log.d(TAG, "XSSFColor object: ${xssfFont.xssfColor}")
             val xssfColor = xssfFont.xssfColor
 
             if (xssfColor != null) {
@@ -78,7 +80,10 @@ object SimpleFontColorUtils {
     // ===== EXCEL'E RENK YAZMA =====
 
     fun applyFontColorSimple(font: XSSFFont, hexColor: String?) {
-        if (hexColor.isNullOrBlank()) return
+        if (hexColor.isNullOrBlank()) {
+            Log.d(TAG, "applyFontColorSimple hexColor.isNullOrBlank $hexColor")
+            return
+        }
 
         try {
             Log.d(TAG, "🎨 Applying font color: $hexColor")

@@ -3,7 +3,6 @@ import android.util.Log
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import org.apache.poi.ss.usermodel.*
-import org.apache.poi.ss.util.CellRangeAddress
 import org.apache.poi.xssf.usermodel.*
 import java.text.SimpleDateFormat
 import java.util.*
@@ -129,7 +128,7 @@ class ExcelToLuckysheetConverter {
                                 "rangeType" to "range",
                                 "borderType" to "border-all",
                                 "style" to extractBorderStyleForSide(style, "top"),
-                                "color" to (ExcelColorUtils.extractBorderColor(style, "top")),
+                                "color" to (BackgroundAndBorderColorUtils.extractBorderColor(style, "top")),
                                 "range" to listOf(mapOf(
                                     "row" to listOf(r, r),
                                     "column" to listOf(c, c)
@@ -157,10 +156,10 @@ class ExcelToLuckysheetConverter {
             val leftStyle = extractBorderStyleForSide(style, "left")
             val rightStyle = extractBorderStyleForSide(style, "right")
 
-            val topColor = ExcelColorUtils.extractBorderColor(style, "top")
-            val bottomColor = ExcelColorUtils.extractBorderColor(style, "bottom")
-            val leftColor = ExcelColorUtils.extractBorderColor(style, "left")
-            val rightColor = ExcelColorUtils.extractBorderColor(style, "right")
+            val topColor = BackgroundAndBorderColorUtils.extractBorderColor(style, "top")
+            val bottomColor = BackgroundAndBorderColorUtils.extractBorderColor(style, "bottom")
+            val leftColor = BackgroundAndBorderColorUtils.extractBorderColor(style, "left")
+            val rightColor = BackgroundAndBorderColorUtils.extractBorderColor(style, "right")
 
             topStyle == bottomStyle && bottomStyle == leftStyle && leftStyle == rightStyle &&
                     topColor == bottomColor && bottomColor == leftColor && leftColor == rightColor
@@ -181,7 +180,7 @@ class ExcelToLuckysheetConverter {
                 "rangeType" to "range",
                 "borderType" to "border-top",
                 "style" to extractBorderStyleForSide(style, "top"),
-                "color" to (ExcelColorUtils.extractBorderColor(style, "top")),
+                "color" to (BackgroundAndBorderColorUtils.extractBorderColor(style, "top")),
                 "range" to listOf(mapOf(
                     "row" to listOf(r, r),
                     "column" to listOf(c, c)
@@ -195,7 +194,7 @@ class ExcelToLuckysheetConverter {
                 "rangeType" to "range",
                 "borderType" to "border-bottom",
                 "style" to extractBorderStyleForSide(style, "bottom"),
-                "color" to (ExcelColorUtils.extractBorderColor(style, "bottom")),
+                "color" to (BackgroundAndBorderColorUtils.extractBorderColor(style, "bottom")),
                 "range" to listOf(mapOf(
                     "row" to listOf(r, r),
                     "column" to listOf(c, c)
@@ -208,7 +207,7 @@ class ExcelToLuckysheetConverter {
                 "rangeType" to "range",
                 "borderType" to "border-left",
                 "style" to extractBorderStyleForSide(style, "left"),
-                "color" to (ExcelColorUtils.extractBorderColor(style, "left")),
+                "color" to (BackgroundAndBorderColorUtils.extractBorderColor(style, "left")),
                 "range" to listOf(mapOf(
                     "row" to listOf(r, r),
                     "column" to listOf(c, c)
@@ -221,7 +220,7 @@ class ExcelToLuckysheetConverter {
                 "rangeType" to "range",
                 "borderType" to "border-right",
                 "style" to extractBorderStyleForSide(style, "right"),
-                "color" to (ExcelColorUtils.extractBorderColor(style, "right")),
+                "color" to (BackgroundAndBorderColorUtils.extractBorderColor(style, "right")),
                 "range" to listOf(mapOf(
                     "row" to listOf(r, r),
                     "column" to listOf(c, c)
@@ -257,7 +256,7 @@ class ExcelToLuckysheetConverter {
             }
 
             val font = xssfCell.sheet.workbook.getFontAt(cellStyle.fontIndexAsInt)
-
+            Log.d(TAG, "Font object: index=${cellStyle.fontIndexAsInt}, font=$font")
             val fontSize = try {
                 val fontPoints = font.fontHeightInPoints.toInt()
                 when {
@@ -279,12 +278,12 @@ class ExcelToLuckysheetConverter {
 
                 ff = font.fontName?.takeIf { it.isNotBlank() } ?: "Arial",
                 fs = fontSize,
-                fc = SimpleFontColorUtils.extractFontColorSimple(font),
+                fc = FontColorUtils.extractFontColorSimple(font),
                 bl = if (font.bold) 1 else 0,
                 it = if (font.italic) 1 else 0,
                 cl = if (font.underline != Font.U_NONE) 1 else 0,
 
-                bg = ExcelColorUtils.extractBackgroundColor(cellStyle as? XSSFCellStyle),
+                bg = BackgroundAndBorderColorUtils.extractBackgroundColor(cellStyle as? XSSFCellStyle),
                 ht = getHorizontalAlignment(cellStyle.alignment),
                 vt = getVerticalAlignment(cellStyle.verticalAlignment)
             )

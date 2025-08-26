@@ -10,7 +10,7 @@ import org.apache.poi.xssf.usermodel.*
  * Supports both XSSF (modern) and indexed (legacy) color formats
  * AWT-free implementation for Android compatibility
  */
-object ExcelColorUtils {
+object BackgroundAndBorderColorUtils {
 
     private const val TAG = "ExcelColorUtils"
 
@@ -63,6 +63,8 @@ object ExcelColorUtils {
 
         try {
             val fillPattern = cellStyle.fillPattern
+            Log.d(TAG, "Background check: fillPattern=${cellStyle?.fillPattern}")
+            Log.d(TAG, "Fill foreground color index: ${cellStyle?.fillForegroundColor}")
             if (fillPattern == FillPatternType.SOLID_FOREGROUND) {
 
                 val xssfStyle = cellStyle as? XSSFCellStyle
