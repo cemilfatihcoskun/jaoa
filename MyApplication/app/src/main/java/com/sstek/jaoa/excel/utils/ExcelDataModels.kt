@@ -162,11 +162,11 @@ object LuckysheetConstants {
     const val DEFAULT_COLUMN_WIDTH = 73.0    // ✅ Double
 
 
-    const val ALIGN_LEFT = 0
-    const val ALIGN_CENTER = 1
+    const val ALIGN_LEFT = 1
+    const val ALIGN_CENTER = 0
     const val ALIGN_RIGHT = 2
-    const val ALIGN_TOP = 0
-    const val ALIGN_MIDDLE = 1
+    const val ALIGN_TOP = 1
+    const val ALIGN_MIDDLE = 0
     const val ALIGN_BOTTOM = 2
 
 
