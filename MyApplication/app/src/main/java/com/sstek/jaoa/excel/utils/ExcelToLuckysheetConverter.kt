@@ -69,18 +69,29 @@ class ExcelToLuckysheetConverter {
         val rowHeights = mutableMapOf<String, Double>()
 
         for (col in 0..maxCol) {
-            val width = sheet.getColumnWidth(col)
-            if (width != sheet.defaultColumnWidth) {
-                val luckysheetWidth = (width / 256.0)
-                columnWidths[col.toString()] = maxOf(luckysheetWidth, 73.0)
+            val widthUnits = sheet.getColumnWidth(col)
+            val defaultUnits = (sheet.defaultColumnWidth * 256).toInt()
+
+            Log.d(TAG, "Column $col: widthUnits=$widthUnits, defaultUnits=$defaultUnits")
+
+            if (widthUnits != defaultUnits) {
+                val pixels = excelColumnWidthToPx(widthUnits)
+                columnWidths[col.toString()] = pixels.toDouble()
+                Log.d(TAG, "Column $col: ${widthUnits} units → ${pixels} px")
+            } else {
+                Log.d(TAG, "Column $col: Using default width, skipping")
             }
         }
 
         for (rowNum in 0..maxRow) {
-            val row = sheet.getRow(rowNum)
-            if (row != null && row.height != sheet.defaultRowHeight) {
-                val luckysheetHeight = (row.height / 20.0)
-                rowHeights[rowNum.toString()] = luckysheetHeight
+            val row = sheet.getRow(rowNum) ?: continue
+            val heightTwips = row.height
+            val defaultTwips = sheet.defaultRowHeight
+
+            if (heightTwips != defaultTwips) {
+                val pixels = excelRowHeightToPx(heightTwips)
+                rowHeights[rowNum.toString()] = pixels.toDouble()
+                Log.d(TAG, "Row $rowNum: ${heightTwips} twips → ${pixels} px")
             }
         }
 
@@ -321,7 +332,7 @@ class ExcelToLuckysheetConverter {
                     BorderStyle.DASH_DOT -> 5                      // DashDot
                     BorderStyle.DASH_DOT_DOT -> 6                  // DashDotDot
                     BorderStyle.DOUBLE -> 7                        // Double
-                    BorderStyle.MEDIUM -> 8                        // Medium ← Bu doğru mapping!
+                    BorderStyle.MEDIUM -> 8                        // Medium
                     BorderStyle.MEDIUM_DASHED -> 9                 // MediumDashed
                     BorderStyle.MEDIUM_DASH_DOT -> 10              // MediumDashDot
                     BorderStyle.MEDIUM_DASH_DOT_DOT -> 11          // MediumDashDotDot
@@ -482,5 +493,13 @@ class ExcelToLuckysheetConverter {
             else -> null
         }
     }
+    // Utility functions
+    private fun excelColumnWidthToPx(widthUnits: Int): Int {
+        val charCount = widthUnits / 256.0
+        return kotlin.math.floor(charCount * 7 + 5).toInt()
+    }
 
+    private fun excelRowHeightToPx(heightTwips: Short): Int {
+        return kotlin.math.round(heightTwips / 15.0).toInt()
+    }
 }

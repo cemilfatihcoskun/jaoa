@@ -8,7 +8,7 @@ import org.apache.poi.xssf.usermodel.*
  * EXCEL TO LUCKYSHEET
  * Excel color utilities for converting between Excel and Luckysheet formats
  * Supports both XSSF (modern) and indexed (legacy) color formats
- * AWT-free implementation for Android compatibility
+ * java.awt.color-free implementation for Android compatibility
  */
 object BackgroundAndBorderColorUtils {
 

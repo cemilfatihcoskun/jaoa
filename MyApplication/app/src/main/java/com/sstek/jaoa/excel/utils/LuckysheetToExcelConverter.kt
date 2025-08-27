@@ -75,11 +75,12 @@ class LuckysheetToExcelConverter {
             try {
                 val col = colIndex.toIntOrNull()
                 if (col != null && width > 0) {
-                    val excelWidth = (width * 256).toInt()
+                    val excelWidth = pxToExcelColumnWidthUnits(width)
                     sheet.setColumnWidth(col, excelWidth)
+                    Log.d(TAG, "Column $col: ${width} px → ${excelWidth} units")
                 }
             } catch (e: Exception) {
-                Log.w(TAG, "Could not set column width for column $colIndex", e)
+                Log.w(TAG, "Could not set column width for column $colIndex: ${e.message}")
             }
         }
 
@@ -89,11 +90,12 @@ class LuckysheetToExcelConverter {
                 val rowNum = rowIndex.toIntOrNull()
                 if (rowNum != null && height > 0) {
                     val row = sheet.getRow(rowNum) ?: sheet.createRow(rowNum)
-                    val excelHeight = (height * 20).toInt().toShort()
+                    val excelHeight = pxToTwips(height)
                     row.height = excelHeight
+                    Log.d(TAG, "Row $rowNum: ${height} px → ${excelHeight} twips")
                 }
             } catch (e: Exception) {
-                Log.w(TAG, "Could not set row height for row $rowIndex", e)
+                Log.w(TAG, "Could not set row height for row $rowIndex: ${e.message}")
             }
         }
     }
@@ -587,4 +589,15 @@ class LuckysheetToExcelConverter {
             false
         }
     }
+    private fun pxToExcelColumnWidthUnits(pixels: Double): Int {
+        val charCount = (pixels - 5) / 7.0
+        val units = kotlin.math.round(charCount * 256).toInt()
+        return units.coerceAtMost(65280).coerceAtLeast(0) // Max 255 char = 65280 units
+    }
+
+    private fun pxToTwips(pixels: Double): Short {
+        val twips = kotlin.math.round(pixels * 15.0).toInt()
+        return twips.coerceIn(0, Short.MAX_VALUE.toInt()).toShort()
+    }
+
 }
