@@ -19,6 +19,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import com.sstek.jaoa.R
 
 @Composable
 fun CheckStoragePermissionWithExplanation(): Boolean {
@@ -37,7 +38,7 @@ fun CheckStoragePermissionWithExplanation(): Boolean {
         if (Environment.isExternalStorageManager()) {
             permissionGranted = true
         } else {
-            Toast.makeText(context, "İzin reddedildi", Toast.LENGTH_LONG).show()
+            Toast.makeText(context, context.resources.getString(R.string.permissionController_permissionDeniedMessage), Toast.LENGTH_LONG).show()
         }
     }
 
@@ -52,10 +53,10 @@ fun CheckStoragePermissionWithExplanation(): Boolean {
     if (showDialog) {
         androidx.compose.material3.AlertDialog(
             onDismissRequest = { showDialog = false },
-            title = { androidx.compose.material3.Text("İzin Gerekiyor") },
+            title = { androidx.compose.material3.Text(context.resources.getString(R.string.permissionController_permissionNeededTitle)) },
             text = {
                 androidx.compose.material3.Text(
-                    "Cihazınızdaki dokümanları görüntüleyebilmemiz için tüm dosyalara erişim izni vermeniz gerekmektedir. Lütfen izin veriniz."
+                    context.resources.getString(R.string.permissionController_permissionNeededMessage)
                 )
             },
             confirmButton = {
@@ -63,7 +64,7 @@ fun CheckStoragePermissionWithExplanation(): Boolean {
                     showDialog = false
                     launcher.launch(Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION))
                 }) {
-                    androidx.compose.material3.Text("İzin Ver")
+                    androidx.compose.material3.Text(context.resources.getString(R.string.permissionController_grantPermission))
                 }
             },
             dismissButton = {
@@ -71,11 +72,11 @@ fun CheckStoragePermissionWithExplanation(): Boolean {
                     showDialog = false
                     Toast.makeText(
                         context,
-                        "İzin verilmediği için dökümanlar görüntülenemiyor.",
+                        context.resources.getString(R.string.permissionController_cannotListDocumentsDueToNotGivenPermissionMessage),
                         Toast.LENGTH_LONG
                     ).show()
                 }) {
-                    androidx.compose.material3.Text("İptal")
+                    androidx.compose.material3.Text(context.resources.getString(R.string.permissionController_cancel))
                 }
             }
         )

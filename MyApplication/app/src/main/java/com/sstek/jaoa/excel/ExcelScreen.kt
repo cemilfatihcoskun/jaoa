@@ -19,6 +19,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.sstek.jaoa.R
 import kotlinx.coroutines.flow.collectLatest
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -34,6 +35,7 @@ fun ExcelScreen(
 
     val isLoading by viewModel.isLoading.collectAsState()
     val selectedFileUri by viewModel.selectedFileUri.collectAsState()
+
 
 
     val createDocumentLauncher = rememberLauncherForActivityResult(
@@ -60,7 +62,13 @@ fun ExcelScreen(
 
         TopAppBar(
             title = {
-                Text(if (selectedFileUri != null) "Excel Düzenleyici" else "Yeni Excel Dosyası")
+                Text(
+                    if (selectedFileUri != null) {
+                        context.resources.getString(R.string.excelscreen_excelEditor)
+                    } else {
+                        context.resources.getString(R.string.excelscreen_newExcelDocument)
+                    }
+                )
             },
             navigationIcon = {
                 IconButton(onClick = {
@@ -72,7 +80,7 @@ fun ExcelScreen(
                         onBack()
                     }
                 }) {
-                    Icon(Icons.Default.ArrowBack, "Geri")
+                    Icon(Icons.Default.ArrowBack,  context.resources.getString(R.string.excelscreen_back))
                 }
             },
             actions = {
@@ -86,26 +94,26 @@ fun ExcelScreen(
                                 viewModel.saveExcelFile(webView)
                             } else {
                                 // Yeni dosya - farklı kaydet dialog'u aç
-                                createDocumentLauncher.launch("Excel_Dosyasi.xlsx")
+                                createDocumentLauncher.launch("${context.resources.getString(R.string.excelscreen_defaultDocumentName)}.xlsx")
                             }
                         } else {
                             // URI yok - farklı kaydet dialog'u aç
-                            createDocumentLauncher.launch("Excel_Dosyasi.xlsx")
+                            createDocumentLauncher.launch("${context.resources.getString(R.string.excelscreen_defaultDocumentName)}.xlsx")
                         }
                     },
                     enabled = !isLoading
                 ) {
-                    Icon(Icons.Filled.Save, "Kaydet")
+                    Icon(Icons.Filled.Save,  context.resources.getString(R.string.excelscreen_save))
                 }
 
                 // ✅ Save As butonu
                 IconButton(
                     onClick = {
-                        createDocumentLauncher.launch("Excel_Dosyasi.xlsx")
+                        createDocumentLauncher.launch("${ context.resources.getString(R.string.excelscreen_defaultDocumentName)}.xlsx")
                     },
                     enabled = !isLoading
                 ) {
-                    Icon(Icons.Filled.SaveAs, "Farklı Kaydet")
+                    Icon(Icons.Filled.SaveAs,  context.resources.getString(R.string.excelscreen_saveAs))
                 }
             }
         )
@@ -119,7 +127,7 @@ fun ExcelScreen(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     CircularProgressIndicator(modifier = Modifier.size(20.dp))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Yükleniyor...")
+                    Text(context.resources.getString(R.string.excelscreen_loading))
                 }
             }
         }
@@ -176,8 +184,8 @@ fun ExcelScreen(
     if (showExitDialog) {
         AlertDialog(
             onDismissRequest = { showExitDialog = false },
-            title = { Text("Kaydedilmemiş Değişiklikler") },
-            text = { Text("Değişiklikleriniz kaydedilmemiş. Çıkmak istediğinizden emin misiniz?") },
+            title = { Text(context.resources.getString(R.string.excelscreen_unsavedChangesTitle)) },
+            text = { Text(context.resources.getString(R.string.excelscreen_unsavedChangesContent)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -186,12 +194,12 @@ fun ExcelScreen(
                         onBack()
                     }
                 ) {
-                    Text("Çık")
+                    Text(context.resources.getString(R.string.excelscreen_confirm))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showExitDialog = false }) {
-                    Text("İptal")
+                    Text(context.resources.getString(R.string.excelscreen_cancel))
                 }
             }
         )

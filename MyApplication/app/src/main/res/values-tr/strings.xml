@@ -1,0 +1,73 @@
+<resources>
+    <string name="app_name">S Ofis</string>
+
+    <string name="mainscreen_internalStorage">İç Depolama</string>
+    <string name="mainscreen_externalStorage">Dış Depolama</string>
+    <string name="mainscreen_search">Ara</string>
+    <string name="mainscreen_delete">Sil</string>
+    <string name="mainscreen_share">Paylaş</string>
+    <string name="mainscreen_rename">Yeniden Adlandır</string>
+    <string name="mainscreen_more">Daha fazlası</string>
+    <string name="mainscreen_dismiss">Sil</string>
+    <string name="mainscreen_confirm">Onayla</string>
+    <string name="mainscreen_renameSuccessMessage">Doküman başarıyla yeniden adlandırıldı.</string>
+    <string name="mainscreen_newName">Yeni ad</string>
+    <string name="mainscreen_powerpointDocument">Powerpoint Dosyası</string>
+    <string name="mainscreen_excelDocument">Excel Dosyası</string>
+    <string name="mainscreen_wordDocument">Word Dosyası</string>
+    <string name="mainscreen_newFile">Yeni</string>
+    <string name="mainscreen_openFile">Aç</string>
+    <string name="mainscreen_all">Tümü</string>
+
+    <string name="wordscreen_back">Geri</string>
+    <string name="wordscreen_undo">Önceki</string>
+    <string name="wordscreen_redo">Sonraki</string>
+    <string name="wordscreen_defaultDocumentName">Doküman</string>
+    <string name="wordscreen_save">Kaydet</string>
+    <string name="wordscreen_saveas">Farklı Kaydet</string>
+    <string name="wordscreen_documentNotReadyMessage">Doküman hazır değil.</string>
+    <string name="wordscreen_documentNotSavedMessage">Doküman kaydedilmedi.</string>
+    <string name="wordscreen_print">Yazdır</string>
+    <string name="wordscreen_share">Paylaş</string>
+
+    <string name="permissionController_permissionDeniedMessage">İzin reddedildi.</string>
+    <string name="permissionController_permissionNeededTitle">İzin gerekiyor</string>
+    <string name="permissionController_permissionNeededMessage">Cihazınızdaki dokümanları görüntüleyebilmemiz için tüm dosyalara erişim izni vermeniz gerekmektedir. Lütfen izin veriniz.</string>
+    <string name="permissionController_grantPermission">İzin ver</string>
+    <string name="permissionController_cannotListDocumentsDueToNotGivenPermissionMessage">İzin verilmediği için dökümanlar görüntülenemiyor.</string>
+    <string name="permissionController_cancel">Reddet</string>
+
+    <string name="fileutils_share">Paylaş</string>
+    <string name="fileutils_manageExternalStoragePermissionNeededMessage">Cihazınızdaki dokümanları görüntüleyebilmemiz için tüm dosyalara erişim izni vermeniz gerekmektedir.</string>
+    <string name="fileutils_filesCouldNotScanned">Cihazınızdaki dosyalar taranamadı.</string>
+
+    <string name="saveLocationDialog_title">Kaydet</string>
+    <string name="saveLocationDialog_content">Nereye kaydetmek istiyorsunuz?</string>
+    <string name="saveLocationDialog_internalStorage">İç depolama</string>
+    <string name="saveLocationDialog_externalStorage">Dış depolama</string>
+
+    <string name="sharer_share">Paylaş</string>
+
+    <string name="printer_defaultDocumentName">Doküman</string>
+    <string name="printer_title">Yazdır</string>
+
+    <string name="wordViewModel_busyMessage">Şu an işlem yapılıyor.</string>
+    <string name="wordViewModel_fileSavedSuccessfullyMessage">Doküman başarıyla kaydedildi.</string>
+    <string name="wordViewModel_fileSaveErrorMessage">Doküman kaydedilemedi.</string>
+    <string name="wordViewModel_firstChooseFileMessage">Lütfen dosya seçiniz.</string>
+    <string name="wordViewModel_fileSavedAsSuccessfullyMessage">Doküman başarıyla farklı kaydedildi.</string>
+    <string name="wordViewModel_fileSavedAsErrorMessage">Doküman farklı kaydedilemedi.</string>
+
+    <string name="excelscreen_excelEditor">Excel Düzenleyici</string>
+    <string name="excelscreen_newExcelDocument">Yeni Excel Dosyası</string>
+    <string name="excelscreen_back">Geri</string>
+    <string name="excelscreen_defaultDocumentName">Doküman</string>
+    <string name="excelscreen_save">Kaydet</string>
+    <string name="excelscreen_saveAs">Farklı kaydet</string>
+    <string name="excelscreen_loading">Yükleniyor</string>
+    <string name="excelscreen_unsavedChangesTitle">Kaydedilmemiş Değişikler</string>
+    <string name="excelscreen_unsavedChangesContent">Kaydedilmemiş değişiklikler var. Çıkmak istediğinize emin misiniz?</string>
+    <string name="excelscreen_confirm">Evet</string>
+    <string name="excelscreen_cancel">İptal</string>
+
+</resources>

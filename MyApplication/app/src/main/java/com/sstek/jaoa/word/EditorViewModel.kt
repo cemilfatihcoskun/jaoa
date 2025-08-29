@@ -16,6 +16,8 @@ import kotlinx.coroutines.launch
 import org.apache.poi.xwpf.usermodel.XWPFDocument
 import java.io.File
 
+import com.sstek.jaoa.R
+
 class EditorViewModel(application: Application) : AndroidViewModel(application) {
     private val _selectedFileUri = MutableStateFlow<Uri?>(null)
     val selectedFileUri: StateFlow<Uri?> = _selectedFileUri
@@ -32,11 +34,14 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
 
+    private val context = getApplication<Application>().applicationContext
+
+
 
     fun loadAndConvert(uri: Uri) {
         if (_isLoading.value) {
             viewModelScope.launch {
-                _toastMessage.emit("Şu an bir işlem yapılıyor.")
+                _toastMessage.emit(context.resources.getString(R.string.wordViewModel_busyMessage))
             }
         }
 
@@ -93,10 +98,10 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
                 file.outputStream().use { doc.write(it) }
 
                 _selectedFileUri.value = Uri.fromFile(file)
-                _toastMessage.emit("Dosya başarıyla kaydedildi: $finalName")
+                _toastMessage.emit(context.resources.getString(R.string.wordViewModel_fileSavedSuccessfullyMessage))
             } catch (e: Exception) {
                 e.printStackTrace()
-                _toastMessage.emit("Dosya kaydedilirken hata oluştu: ${e.message}")
+                _toastMessage.emit(context.resources.getString(R.string.wordViewModel_fileSaveErrorMessage))
             }
         }
     }
@@ -107,7 +112,7 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
     fun saveHtmlAsDocx(html: String) {
         if (_isLoading.value) {
             viewModelScope.launch {
-                _toastMessage.emit("Şu an bir işlem yapılıyor.")
+                _toastMessage.emit(context.resources.getString(R.string.wordViewModel_busyMessage))
             }
         }
 
@@ -120,16 +125,16 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
                     context.contentResolver.openOutputStream(uri)?.use { out ->
                         doc.write(out)
                     }
-                    _toastMessage.emit("Dosya başarıyla kaydedildi.")
+                    _toastMessage.emit(context.resources.getString(R.string.wordViewModel_fileSavedSuccessfullyMessage))
                 } catch (e: Exception) {
                     e.printStackTrace()
-                    _toastMessage.emit("Dosya kaydedilirken hata oluştu: ${e.message}")
+                    _toastMessage.emit(context.resources.getString(R.string.wordViewModel_fileSaveErrorMessage))
                 } finally {
                     _isLoading.value = false
                 }
             }
         } ?: viewModelScope.launch {
-            _toastMessage.emit("Lütfen önce dosya seçin.")
+            _toastMessage.emit(context.resources.getString(R.string.wordViewModel_firstChooseFileMessage))
             _isLoading.value = false
         }
     }
@@ -137,7 +142,7 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
     fun saveAs(html: String, uri: Uri) {
         if (_isLoading.value) {
             viewModelScope.launch {
-                _toastMessage.emit("Şu an bir işlem yapılıyor.")
+                _toastMessage.emit(context.resources.getString(R.string.wordViewModel_busyMessage))
             }
         }
 
@@ -149,10 +154,10 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
                     doc.write(outputStream)
                 }
                 _selectedFileUri.value = uri
-                _toastMessage.emit("Farklı kaydedildi.")
+                _toastMessage.emit(context.resources.getString(R.string.wordViewModel_fileSavedAsSuccessfullyMessage))
             } catch (e: Exception) {
                 e.printStackTrace()
-                _toastMessage.emit("Dosya kaydedilirken hata oluştu: ${e.message}")
+                _toastMessage.emit(context.resources.getString(R.string.wordViewModel_fileSavedAsErrorMessage))
             }
         }
     }

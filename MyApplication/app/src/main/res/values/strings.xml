@@ -1,3 +1,73 @@
 <resources>
-    <string name="app_name">S Ofis</string>
+    <string name="app_name">S Office</string>
+
+    <string name="mainscreen_internalStorage">Internal Storage</string>
+    <string name="mainscreen_externalStorage">External Storage</string>
+    <string name="mainscreen_search">Search</string>
+    <string name="mainscreen_delete">Delete</string>
+    <string name="mainscreen_share">Share</string>
+    <string name="mainscreen_rename">Rename</string>
+    <string name="mainscreen_more">More</string>
+    <string name="mainscreen_dismiss">Cancel</string>
+    <string name="mainscreen_confirm">OK</string>
+    <string name="mainscreen_renameSuccessMessage">The file renamed successfully.</string>
+    <string name="mainscreen_newName">New name</string>
+    <string name="mainscreen_powerpointDocument">Powerpoint Document</string>
+    <string name="mainscreen_excelDocument">Excel Document</string>
+    <string name="mainscreen_wordDocument">Word Document</string>
+    <string name="mainscreen_newFile">New</string>
+    <string name="mainscreen_openFile">Open</string>
+    <string name="mainscreen_all">All</string>
+
+    <string name="wordscreen_back">Back</string>
+    <string name="wordscreen_undo">Undo</string>
+    <string name="wordscreen_redo">Redo</string>
+    <string name="wordscreen_defaultDocumentName">Document</string>
+    <string name="wordscreen_save">Save</string>
+    <string name="wordscreen_saveas">Save As</string>
+    <string name="wordscreen_documentNotReadyMessage">Document has not ready yet.</string>
+    <string name="wordscreen_documentNotSavedMessage">The document has not saved yet.</string>
+    <string name="wordscreen_print">Print</string>
+    <string name="wordscreen_share">Share</string>
+
+    <string name="permissionController_permissionDeniedMessage">Permission Denied</string>
+    <string name="permissionController_permissionNeededTitle">Permission Needed</string>
+    <string name="permissionController_permissionNeededMessage">To display all of the documents in your device, accesing all of the files permission is needed. Please grant it.</string>
+    <string name="permissionController_grantPermission">Grant</string>
+    <string name="permissionController_cannotListDocumentsDueToNotGivenPermissionMessage">Cannot display all of the documents due to not given the permission.</string>
+    <string name="permissionController_cancel">Cancel</string>
+
+    <string name="fileutils_share">Share</string>
+    <string name="fileutils_manageExternalStoragePermissionNeededMessage">Manage External Storage permission is needed for scanning all the documents in your device.</string>
+    <string name="fileutils_filesCouldNotScanned">Files could not scanned.</string>
+
+    <string name="saveLocationDialog_title">Save File</string>
+    <string name="saveLocationDialog_content">Where do you want to save the document?</string>
+    <string name="saveLocationDialog_internalStorage">Internal Storage</string>
+    <string name="saveLocationDialog_externalStorage">External Storage</string>
+
+    <string name="sharer_share">Share</string>
+
+    <string name="printer_defaultDocumentName">Document</string>
+    <string name="printer_title">Print</string>
+
+    <string name="wordViewModel_busyMessage">Currently a job is doing.</string>
+    <string name="wordViewModel_fileSavedSuccessfullyMessage">The document saved as successfully.</string>
+    <string name="wordViewModel_fileSaveErrorMessage">The document could not saved.</string>
+    <string name="wordViewModel_firstChooseFileMessage">Please choose a file.</string>
+    <string name="wordViewModel_fileSavedAsSuccessfullyMessage">The document saved as successfully.</string>
+    <string name="wordViewModel_fileSavedAsErrorMessage">The document could not saved as.</string>
+
+    <string name="excelscreen_excelEditor">Excel Editor</string>
+    <string name="excelscreen_newExcelDocument">New Excel Document</string>
+    <string name="excelscreen_back">Back</string>
+    <string name="excelscreen_defaultDocumentName">Save As</string>
+    <string name="excelscreen_save">Save</string>
+    <string name="excelscreen_saveAs">Save As</string>
+    <string name="excelscreen_loading">Loading</string>
+    <string name="excelscreen_unsavedChangesTitle">Unsaved Modifications</string>
+    <string name="excelscreen_unsavedChangesContent">There are modifications that are not saved. Are you sure to exit?</string>
+    <string name="excelscreen_confirm">Yes</string>
+    <string name="excelscreen_cancel">Cancel</string>
+
 </resources>

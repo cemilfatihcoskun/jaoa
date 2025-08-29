@@ -26,6 +26,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.sstek.jaoa.R
 import com.sstek.jaoa.core.JAOATheme
 import com.sstek.jaoa.core.getFileName
 import com.sstek.jaoa.word.utils.htmlPrint
@@ -133,7 +134,7 @@ fun QuillEditorScreen(
                     viewModel.clearSelectedFile()
                     onBack()
                 }) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = "Geri")
+                    Icon(Icons.Default.ArrowBack, contentDescription = context.resources.getString(R.string.wordscreen_back))
                 }
 
                 Spacer(modifier = Modifier.width(8.dp))
@@ -141,13 +142,13 @@ fun QuillEditorScreen(
                 IconButton(onClick = {
                     webView?.evaluateJavascript("quill.history.undo();", null)
                 }) {
-                    Icon(Icons.Default.Undo, contentDescription = "Geri Al")
+                    Icon(Icons.Default.Undo, contentDescription = context.resources.getString(R.string.wordscreen_undo))
                 }
 
                 IconButton(onClick = {
                     webView?.evaluateJavascript("quill.history.redo();", null)
                 }) {
-                    Icon(Icons.Default.Redo, contentDescription = "İleri Al")
+                    Icon(Icons.Default.Redo, contentDescription = context.resources.getString(R.string.wordscreen_redo))
                 }
 
                 Spacer(modifier = Modifier.width(8.dp))
@@ -186,17 +187,17 @@ fun QuillEditorScreen(
                             viewModel.saveHtmlAsDocx(decodedHtml)
                         }
                     } else {
-                        createDocumentLauncher.launch("Dosya.docx")
+                        createDocumentLauncher.launch("${context.resources.getString(R.string.wordscreen_defaultDocumentName)}.docx")
                     }
 
                 }) {
-                    Icon(Icons.Filled.Save, contentDescription = "Kaydet")
+                    Icon(Icons.Filled.Save, contentDescription = context.resources.getString(R.string.wordscreen_save))
                 }
 
                 IconButton(onClick = {
-                    createDocumentLauncher.launch("Dosya.docx")
+                    createDocumentLauncher.launch("${context.resources.getString(R.string.wordscreen_defaultDocumentName)}.docx")
                 }) {
-                    Icon(Icons.Filled.SaveAs, contentDescription = "Farklı Kaydet")
+                    Icon(Icons.Filled.SaveAs, contentDescription = context.resources.getString(R.string.wordscreen_saveas))
                 }
 
                 IconButton(onClick = {
@@ -205,19 +206,19 @@ fun QuillEditorScreen(
                         webView?.let {
                             htmlPrint(it, context)
                         } ?: {
-                            Toast.makeText(context, "Doküman hazır değil.", Toast.LENGTH_SHORT)
+                            Toast.makeText(context, context.resources.getString(R.string.wordscreen_documentNotReadyMessage), Toast.LENGTH_SHORT)
                                 .show()
                         }
 
                     } else {
                         android.widget.Toast.makeText(
                             context,
-                            "Henüz dosya kaydedilmedi.",
+                            context.resources.getString(R.string.wordscreen_documentNotSavedMessage),
                             android.widget.Toast.LENGTH_SHORT
                         ).show()
                     }
                 }) {
-                    Icon(Icons.Default.Print, contentDescription = "Yazdır")
+                    Icon(Icons.Default.Print, contentDescription = context.resources.getString(R.string.wordscreen_print))
                 }
 
                 IconButton(onClick = {
@@ -232,12 +233,12 @@ fun QuillEditorScreen(
                     } else {
                         android.widget.Toast.makeText(
                             context,
-                            "Henüz dosya kaydedilmedi.",
+                            context.resources.getString(R.string.wordscreen_documentNotSavedMessage),
                             android.widget.Toast.LENGTH_SHORT
                         ).show()
                     }
                 }) {
-                    Icon(Icons.Default.Share, contentDescription = "Paylaş")
+                    Icon(Icons.Default.Share, contentDescription = context.resources.getString(R.string.wordscreen_share))
                 }
 
 

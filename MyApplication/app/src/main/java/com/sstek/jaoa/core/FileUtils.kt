@@ -8,6 +8,8 @@ import android.provider.MediaStore
 import android.util.Log
 import android.widget.Toast
 import java.io.File
+import com.sstek.jaoa.R
+
 
 // Ortak dosya silme
 fun deleteFile(context: Context, uri: Uri) {
@@ -49,7 +51,7 @@ fun shareFile(context: android.content.Context, uri: Uri) {
         putExtra(android.content.Intent.EXTRA_STREAM, fileUri)
         addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
     }
-    context.startActivity(android.content.Intent.createChooser(intent, "Dosya paylaş"))
+    context.startActivity(android.content.Intent.createChooser(intent, context.resources.getString(R.string.fileutils_share)))
 }
 
 // Internal storage için FileUtils wrapper
@@ -85,7 +87,7 @@ fun getDocxFilesWithFileApi(context: Context, extensions: List<FileType>): List<
     val docxList = mutableListOf<Triple<String, Uri, String>>()
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && !Environment.isExternalStorageManager()) {
         Log.w("FileUtils", "MANAGE_EXTERNAL_STORAGE required for File API")
-        Toast.makeText(context, "Tüm dosyalara erişim izni gerekli.", Toast.LENGTH_LONG).show()
+        Toast.makeText(context, context.resources.getString(R.string.fileutils_manageExternalStoragePermissionNeededMessage), Toast.LENGTH_LONG).show()
         return emptyList()
     }
 
@@ -125,7 +127,7 @@ fun getDocxFilesWithFileApi(context: Context, extensions: List<FileType>): List<
         }
     } catch (e: Exception) {
         Log.e("FileUtils", "File API scan failed: ${e.message}", e)
-        Toast.makeText(context, "Dosyalar yüklenirken hata: ${e.message}", Toast.LENGTH_LONG).show()
+        Toast.makeText(context, context.resources.getString(R.string.fileutils_filesCouldNotScanned), Toast.LENGTH_LONG).show()
     }
 
     return docxList.distinctBy { it.third }.map { it.first to it.second }

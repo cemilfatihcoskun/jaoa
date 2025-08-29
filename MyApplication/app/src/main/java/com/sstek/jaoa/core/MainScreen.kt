@@ -32,6 +32,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 
+import com.sstek.jaoa.R
+
 @SuppressLint("UnrememberedMutableState")
 @Composable
 fun MainScreen(
@@ -80,7 +82,12 @@ fun MainScreen(
                         .padding(8.dp)
                 ) {
                     // TabRow: Internal / External
-                    val tabs = listOf("İç Depolama", "Dış Depolama")
+
+
+                    val tabs = listOf(
+                        context.resources.getString(R.string.mainscreen_internalStorage),
+                        context.resources.getString(R.string.mainscreen_externalStorage)
+                    )
                     TabRow(selectedTabIndex = selectedTabIndex) {
                         tabs.forEachIndexed { index, title ->
                             Tab(
@@ -98,7 +105,7 @@ fun MainScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(top = 8.dp, bottom = 4.dp),
-                        placeholder = { Text("Ara...") },
+                        placeholder = { Text(context.resources.getString(R.string.mainscreen_search)) },
                         shape = RoundedCornerShape(30),
                         singleLine = true
                     )
@@ -111,7 +118,7 @@ fun MainScreen(
                         horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
                         FilterButton(
-                            label = "Tümü",
+                            label = context.resources.getString(R.string.mainscreen_all),
                             icon = Icons.Default.FolderOpen,
                             isSelected = selectedFilter == null,
                             onClick = { selectedFilter = null }
@@ -144,12 +151,12 @@ fun MainScreen(
                         },
                         modifier = Modifier.padding(bottom = 16.dp)
                     ) {
-                        Icon(Icons.Default.FolderOpen, contentDescription = "Dosya aç")
+                        Icon(Icons.Default.FolderOpen, contentDescription = context.resources.getString(R.string.mainscreen_openFile))
                     }
                     FloatingActionButton(
                         onClick = { showNewFileMenu = true }
                     ) {
-                        Icon(Icons.Default.Add, contentDescription = "Yeni dosya")
+                        Icon(Icons.Default.Add, contentDescription = context.resources.getString(R.string.mainscreen_newFile))
                     }
 
                     DropdownMenu(
@@ -157,21 +164,21 @@ fun MainScreen(
                         onDismissRequest = { showNewFileMenu = false }
                     ) {
                         DropdownMenuItem(
-                            text = { Text("Word Dosyası") },
+                            text = { Text(context.resources.getString(R.string.mainscreen_wordDocument)) },
                             onClick = {
                                 onCreateNew(FileType.DOCX)
                                 showNewFileMenu = false
                             }
                         )
                         DropdownMenuItem(
-                            text = { Text("Excel Dosyası") },
+                            text = { Text(context.resources.getString(R.string.mainscreen_excelDocument)) },
                             onClick = {
                                 onCreateNew(FileType.XLSX)
                                 showNewFileMenu = false
                             }
                         )
                         DropdownMenuItem(
-                            text = { Text("PowerPoint Dosyası") },
+                            text = { Text(context.resources.getString(R.string.mainscreen_powerpointDocument)) },
                             onClick = {
                                 onCreateNew(FileType.PPTX)
                                 showNewFileMenu = false
@@ -222,12 +229,12 @@ fun FileCard(
     if (showRenameDialog) {
         AlertDialog(
             onDismissRequest = { showRenameDialog = false },
-            title = { Text("Dosyayı Yeniden Adlandır") },
+            title = { Text(context.resources.getString(R.string.mainscreen_rename)) },
             text = {
                 TextField(
                     value = newName,
                     onValueChange = { newName = it },
-                    label = { Text("Yeni isim") },
+                    label = { Text(context.resources.getString(R.string.mainscreen_newName)) },
                     singleLine = true
                 )
             },
@@ -236,14 +243,14 @@ fun FileCard(
                     renameFile(context, uri, newName)
                     showRenameDialog = false
                     updateFiles()
-                    Toast.makeText(context, "Dosya yeniden adlandırıldı", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, context.resources.getString(R.string.mainscreen_renameSuccessMessage), Toast.LENGTH_SHORT).show()
                 }) {
-                    Text("Tamam")
+                    Text(context.resources.getString(R.string.mainscreen_confirm))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showRenameDialog = false }) {
-                    Text("İptal")
+                    Text(context.resources.getString(R.string.mainscreen_dismiss))
                 }
             }
         )
@@ -273,28 +280,28 @@ fun FileCard(
             )
             Box {
                 IconButton(onClick = { expandedMenu = true; expandedMenuState(true) }) {
-                    Icon(Icons.Default.MoreVert, contentDescription = "Daha fazla")
+                    Icon(Icons.Default.MoreVert, contentDescription = context.resources.getString(R.string.mainscreen_more))
                 }
                 DropdownMenu(
                     expanded = expandedMenu,
                     onDismissRequest = { expandedMenu = false; expandedMenuState(false) }
                 ) {
                     DropdownMenuItem(
-                        text = { Text("Yeniden Adlandır") },
+                        text = { Text(context.resources.getString(R.string.mainscreen_rename)) },
                         onClick = {
                             expandedMenu = false
                             showRenameDialog = true
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("Paylaş") },
+                        text = { Text(context.resources.getString(R.string.mainscreen_share)) },
                         onClick = {
                             expandedMenu = false
                             shareFile(context, uri)
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("Sil") },
+                        text = { Text(context.resources.getString(R.string.mainscreen_delete)) },
                         onClick = {
                             expandedMenu = false
                             deleteFile(context, uri)
