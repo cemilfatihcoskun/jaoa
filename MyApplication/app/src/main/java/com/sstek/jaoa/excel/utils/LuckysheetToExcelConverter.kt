@@ -413,17 +413,34 @@ class LuckysheetToExcelConverter {
     }
 
     private fun setCellValue(cell: XSSFCell, cellValue: LuckysheetCellValue) {
-        // First check if there's a formula
+
         if (!cellValue.f.isNullOrBlank()) {
             try {
-                cell.cellFormula = cellValue.f
+                val formula = cellValue.f.removePrefix("=")
+                cell.cellFormula = formula
+
+                when (val value = cellValue.v) {
+                    is Number -> {
+                        cell.setCellValue(value.toDouble())
+                        Log.d(TAG, "Set formula: $formula with cached numeric value: $value")
+                    }
+                    is String -> {
+                        cell.setCellValue(value)
+                        Log.d(TAG, "Set formula: $formula with cached string value: $value")
+                    }
+                    is Boolean -> {
+                        cell.setCellValue(value)
+                        Log.d(TAG, "Set formula: $formula with cached boolean value: $value")
+                    }
+                    else -> {
+                        Log.d(TAG, "Set formula: $formula without cached value")
+                    }
+                }
                 return
             } catch (e: Exception) {
                 Log.w(TAG, "Could not set formula: ${cellValue.f}", e)
-                // Fall back to setting the value directly
             }
         }
-
 
         when (val value = cellValue.v) {
             is String -> {
@@ -525,6 +542,12 @@ class LuckysheetToExcelConverter {
             }
         }
 
+        Log.d(TAG, "Processing cell tb value: ${cellValue.tb}")
+        cellValue.tb?.let { textBreak ->
+            Log.d(TAG, "Applying text break: $textBreak")
+            applyTextBreak(style, textBreak)
+        }
+
         //  Number format
         cellValue.ct?.let { cellType ->
             when (cellType.fa) {
@@ -562,7 +585,8 @@ class LuckysheetToExcelConverter {
             cellValue.cl?.toString() ?: "null",
             cellValue.ht?.toString() ?: "null",
             cellValue.vt?.toString() ?: "null",
-            cellValue.ct?.fa ?: "null"
+            cellValue.ct?.fa ?: "null",
+            cellValue.tb ?: "null"
         ).joinToString("|")
 
         Log.d(TAG, "Style key for fc=${cellValue.fc}, bg=${cellValue.bg}: $key")
@@ -579,7 +603,8 @@ class LuckysheetToExcelConverter {
                 cellValue.cl == 1 ||
                 cellValue.ht != null ||
                 cellValue.vt != null ||
-                cellValue.ct?.fa != "General"
+                cellValue.ct?.fa != "General"||
+                cellValue.tb != null
     }
 
     private fun isDateString(value: String): Boolean {
@@ -598,6 +623,25 @@ class LuckysheetToExcelConverter {
     private fun pxToTwips(pixels: Double): Short {
         val twips = kotlin.math.round(pixels * 15.0).toInt()
         return twips.coerceIn(0, Short.MAX_VALUE.toInt()).toShort()
+    }
+    private fun applyTextBreak(cellStyle: XSSFCellStyle, tbValue: String?) {
+        when (tbValue) {
+            "2" -> {
+                cellStyle.wrapText = true
+                cellStyle.shrinkToFit = false
+                Log.d(TAG, "Applied text wrap")
+            }
+            "0", null  -> {
+                cellStyle.wrapText = false
+                cellStyle.shrinkToFit = true
+                Log.d(TAG, "Applied shrink to fit (clip)")
+            }
+            "1" -> {
+                cellStyle.wrapText = false
+                cellStyle.shrinkToFit = false
+                Log.d(TAG, "Applied overflow")
+            }
+        }
     }
 
 }

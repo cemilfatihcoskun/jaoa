@@ -267,7 +267,6 @@ class ExcelToLuckysheetConverter {
             }
 
             val font = xssfCell.sheet.workbook.getFontAt(cellStyle.fontIndexAsInt)
-            Log.d(TAG, "Font object: index=${cellStyle.fontIndexAsInt}, font=$font")
             val fontSize = try {
                 val fontPoints = font.fontHeightInPoints.toInt()
                 when {
@@ -279,6 +278,9 @@ class ExcelToLuckysheetConverter {
                 Log.w(TAG, "Could not get font size, using default: ${e.message}")
                 11
             }
+
+            val textBreak = getTextBreakValue(cellStyle)
+            Log.d(TAG, "Cell (${cell.rowIndex},${cell.columnIndex}): text break = $textBreak " + "(wrapText=${cellStyle.wrapText}, shrinkToFit=${cellStyle.shrinkToFit})")
 
             val luckysheetValue = LuckysheetCellValue(
                 v = cellValue,
@@ -296,7 +298,9 @@ class ExcelToLuckysheetConverter {
 
                 bg = BackgroundAndBorderColorUtils.extractBackgroundColor(cellStyle as? XSSFCellStyle),
                 ht = getHorizontalAlignment(cellStyle.alignment),
-                vt = getVerticalAlignment(cellStyle.verticalAlignment)
+                vt = getVerticalAlignment(cellStyle.verticalAlignment),
+                tb = getTextBreakValue(cellStyle)
+
             )
 
             return LuckysheetCell(
@@ -360,7 +364,7 @@ class ExcelToLuckysheetConverter {
     private fun getFormulaSafely(cell: XSSFCell): String? {
         return try {
             if (cell.cellType == CellType.FORMULA) {
-                cell.cellFormula
+                "=" + cell.cellFormula
             } else {
                 null
             }
@@ -415,9 +419,26 @@ class ExcelToLuckysheetConverter {
 
     private fun extractDisplayValue(cell: Cell): String? {
         return try {
+
+            if (cell.cellType == CellType.FORMULA) {
+
+                return when (cell.cachedFormulaResultType) {
+                    CellType.NUMERIC -> {
+                        val numValue = cell.numericCellValue
+                        if (numValue == numValue.toLong().toDouble()) {
+                            numValue.toLong().toString()
+                        } else {
+                            numValue.toString()
+                        }
+                    }
+                    CellType.STRING -> cell.stringCellValue
+                    CellType.BOOLEAN -> cell.booleanCellValue.toString()
+                    else -> null
+                }
+            }
+
             val dataFormatter = DataFormatter()
             val displayValue = dataFormatter.formatCellValue(cell)
-
             displayValue.takeIf { it.isNotBlank() }?.let { cleanControlCharacters(it) }
         } catch (e: Exception) {
             extractCellValue(cell)?.toString()?.let { cleanControlCharacters(it) }
@@ -459,16 +480,29 @@ class ExcelToLuckysheetConverter {
     }
 
     private fun getLuckysheetCellType(cell: Cell): LuckysheetCellType {
-        val format = cell.cellStyle.dataFormatString ?: "General"
 
+        if (cell.cellType == CellType.FORMULA) {
+            return when (cell.cachedFormulaResultType) {
+                CellType.NUMERIC -> LuckysheetCellType("General", LuckysheetConstants.TYPE_NUMBER) // "n"
+                CellType.STRING -> LuckysheetCellType("General", LuckysheetConstants.TYPE_STRING)  // "s"
+                CellType.BOOLEAN -> LuckysheetCellType("General", LuckysheetConstants.TYPE_BOOLEAN) // "b"
+                else -> LuckysheetCellType("General", LuckysheetConstants.TYPE_NUMBER) // Default numeric
+            }
+        }
+        val format = cell.cellStyle.dataFormatString ?: "General"
         return when {
             format.contains("%") -> LuckysheetCellType("0.00%", LuckysheetConstants.TYPE_NUMBER)
             format.contains("$") || format.contains("€") || format.contains("£") ->
                 LuckysheetCellType("$#,##0.00", LuckysheetConstants.TYPE_NUMBER)
             format.contains("date", true) || format.contains("yyyy") || format.contains("mm") ->
                 LuckysheetCellType("yyyy-mm-dd", LuckysheetConstants.TYPE_DATE)
-            cell.cellType == CellType.NUMERIC ->
-                LuckysheetCellType("0.00", LuckysheetConstants.TYPE_NUMBER)
+            cell.cellType == CellType.NUMERIC -> {
+                if (format == "General") {
+                    LuckysheetCellType("General", LuckysheetConstants.TYPE_NUMBER)
+                } else {
+                    LuckysheetCellType(format, LuckysheetConstants.TYPE_NUMBER)
+                }
+            }
             cell.cellType == CellType.BOOLEAN ->
                 LuckysheetCellType("General", LuckysheetConstants.TYPE_BOOLEAN)
             else ->
@@ -501,5 +535,13 @@ class ExcelToLuckysheetConverter {
 
     private fun excelRowHeightToPx(heightTwips: Short): Int {
         return kotlin.math.round(heightTwips / 15.0).toInt()
+    }
+
+    private fun getTextBreakValue(cellStyle: CellStyle): String? {
+        return when {
+            cellStyle.wrapText -> "2"           // wrap
+            cellStyle.shrinkToFit -> "0"      // clip (shrink to fit)
+            else -> "0"                        // overflow (default)
+        }
     }
 }
