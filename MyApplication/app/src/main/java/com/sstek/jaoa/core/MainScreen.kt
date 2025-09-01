@@ -407,17 +407,17 @@ fun FileCard(
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text(context.resources.getString(R.string.mainscreen_share)) },
-                        onClick = {
-                            expandedMenu = false
-                            shareFile(context, uri)
-                        }
-                    )
-                    DropdownMenuItem(
                         text = { Text(context.resources.getString(R.string.mainscreen_delete)) },
                         onClick = {
                             expandedMenu = false
                             showDeleteDialog = true
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text(context.resources.getString(R.string.mainscreen_share)) },
+                        onClick = {
+                            expandedMenu = false
+                            shareFile(context, uri)
                         }
                     )
                 }
