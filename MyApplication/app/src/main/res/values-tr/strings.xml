@@ -8,7 +8,7 @@
     <string name="mainscreen_share">Paylaş</string>
     <string name="mainscreen_rename">Yeniden Adlandır</string>
     <string name="mainscreen_more">Daha fazlası</string>
-    <string name="mainscreen_dismiss">Sil</string>
+    <string name="mainscreen_dismiss">Reddet</string>
     <string name="mainscreen_confirm">Onayla</string>
     <string name="mainscreen_renameSuccessMessage">Doküman başarıyla yeniden adlandırıldı.</string>
     <string name="mainscreen_newName">Yeni ad</string>
@@ -18,6 +18,9 @@
     <string name="mainscreen_newFile">Yeni</string>
     <string name="mainscreen_openFile">Aç</string>
     <string name="mainscreen_all">Tümü</string>
+    <string name="mainscreen_deleteWarningTitle">Doküman Silme</string>
+    <string name="mainscreen_deleteWarningMessage">Doküman silenecek. Emin misiniz?</string>
+
 
     <string name="wordscreen_back">Geri</string>
     <string name="wordscreen_undo">Önceki</string>

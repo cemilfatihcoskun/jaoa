@@ -1,18 +1,31 @@
 package com.sstek.jaoa.core
 
 import android.annotation.SuppressLint
+import android.content.Intent
 import android.net.Uri
+import android.os.Build
+import android.os.Environment
+import android.provider.Settings
+import android.util.LayoutDirection
 import android.util.Log
 import android.widget.Toast
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -30,10 +43,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.compose.LocalLifecycleOwner
 
 import com.sstek.jaoa.R
 
+@RequiresApi(Build.VERSION_CODES.R)
 @SuppressLint("UnrememberedMutableState")
 @Composable
 fun MainScreen(
@@ -49,16 +68,39 @@ fun MainScreen(
 
     val extensions = listOf(FileType.DOCX, FileType.XLSX)
 
+    var hasStoragePermission by remember { mutableStateOf(Environment.isExternalStorageManager()) }
+
     val updateFiles: () -> Unit = {
         val allFiles = if (selectedTabIndex == 0) {
             getInternalFiles(context, extensions)
         } else {
-            getExternalFiles(context, extensions)
+            if (hasStoragePermission) {
+                getExternalFiles(context, extensions)
+            } else {
+                emptyList()
+            }
         }
+
 
         files = allFiles.filter { (name, _) ->
             (searchQuery.isBlank() || name.contains(searchQuery, ignoreCase = true)) &&
                     (selectedFilter == null || FileType.fromFileName(name) == selectedFilter)
+        }
+    }
+
+    // LIFECYCLE Listener
+    val lifecycleOwner: LifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                hasStoragePermission = Environment.isExternalStorageManager()
+                updateFiles()
+            }
+        }
+
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
         }
     }
 
@@ -81,9 +123,9 @@ fun MainScreen(
                         .statusBarsPadding()
                         .padding(8.dp)
                 ) {
+
+
                     // TabRow: Internal / External
-
-
                     val tabs = listOf(
                         context.resources.getString(R.string.mainscreen_internalStorage),
                         context.resources.getString(R.string.mainscreen_externalStorage)
@@ -114,7 +156,7 @@ fun MainScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                            .padding(bottom = 16.dp, end = 16.dp),
                         horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
                         FilterButton(
@@ -139,25 +181,39 @@ fun MainScreen(
                 }
             },
             floatingActionButton = {
-                Column {
-                    FloatingActionButton(
-                        onClick = {
-                            // Sadece external storage için dosya picker
-                            if (selectedTabIndex == 1) {
-                                // MIME tipini DOCX ile sınırla
+                Column(
+                    horizontalAlignment = Alignment.End
+                ) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        verticalAlignment = Alignment.Bottom,
+                        modifier = Modifier.padding(end = 16.dp)
+                    ) {
+                        FloatingActionButton(
+                            onClick = {
+                                if (hasStoragePermission) {
+                                    filePickerLauncher.launch(arrayOf(
+                                        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                                    ))
+                                } else {
+                                    Toast.makeText(
+                                        context,
+                                        context.getString(R.string.permissionController_permissionNeededMessage),
+                                        Toast.LENGTH_LONG
+                                    ).show()
+                                }
+                            },
+                        ) {
+                            Icon(Icons.Default.FolderOpen, contentDescription = context.resources.getString(R.string.mainscreen_openFile))
+                        }
+                        FloatingActionButton(
+                            onClick = { showNewFileMenu = true }
+                        ) {
+                            Icon(Icons.Default.Add, contentDescription = context.resources.getString(R.string.mainscreen_newFile))
+                        }
+                    }
 
-                                filePickerLauncher.launch(arrayOf("application/vnd.openxmlformats-officedocument.wordprocessingml.document"))
-                            }
-                        },
-                        modifier = Modifier.padding(bottom = 16.dp)
-                    ) {
-                        Icon(Icons.Default.FolderOpen, contentDescription = context.resources.getString(R.string.mainscreen_openFile))
-                    }
-                    FloatingActionButton(
-                        onClick = { showNewFileMenu = true }
-                    ) {
-                        Icon(Icons.Default.Add, contentDescription = context.resources.getString(R.string.mainscreen_newFile))
-                    }
 
                     DropdownMenu(
                         expanded = showNewFileMenu,
@@ -186,12 +242,35 @@ fun MainScreen(
                         )
                     }
                 }
+
+
+            },
+            bottomBar = {
+                val layoutDirection = LocalLayoutDirection.current
+                Column(
+                    modifier = Modifier
+                        .statusBarsPadding()
+                        .padding(
+                            bottom = 48.dp,
+                        )
+                ) {
+                    if (!hasStoragePermission) {
+                        PermissionWarningCard()
+                    }
+                }
             }
         ) { padding ->
+            val layoutDirection = LocalLayoutDirection.current
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(padding)
+                    .padding(
+                        bottom = padding.calculateBottomPadding(),
+                        top = padding.calculateTopPadding(),
+                        start = padding.calculateStartPadding(layoutDirection),
+                        end = padding.calculateEndPadding(layoutDirection)
+                    )
+                    .heightIn(min = 0.dp)
             ) {
                 items(files) { (name, uri) ->
                     var expandedMenu by remember { mutableStateOf(false) }
@@ -203,6 +282,10 @@ fun MainScreen(
                         isInternal = selectedTabIndex == 0,
                         updateFiles
                     )
+                }
+
+                item {
+                    Spacer(modifier = Modifier.height(120.dp))
                 }
             }
         }
@@ -225,6 +308,12 @@ fun FileCard(
 
     var showRenameDialog by remember { mutableStateOf(false) }
     var newName by remember { mutableStateOf(name) }
+
+    var showDeleteDialog by remember { mutableStateOf(false) }
+
+
+
+
 
     if (showRenameDialog) {
         AlertDialog(
@@ -256,17 +345,41 @@ fun FileCard(
         )
     }
 
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text(context.resources.getString(R.string.mainscreen_deleteWarningTitle)) },
+            text = { Text(context.resources.getString(R.string.mainscreen_deleteWarningMessage)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    deleteFile(context, uri)
+                    showDeleteDialog = false
+                    updateFiles()
+                }) {
+                    Text(context.resources.getString(R.string.mainscreen_delete))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text(context.resources.getString(R.string.mainscreen_dismiss))
+                }
+            }
+        )
+    }
+
+
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 4.dp)
+            .padding(horizontal = 8.dp, vertical = 4.dp,)
             .clickable {
                 val fileType = FileType.fromFileName(name)
                 onOpenFile(fileType, uri)
             }
             .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(12.dp)),
         shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(2.dp),
+        elevation = CardDefaults.cardElevation(8.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Row(
@@ -304,8 +417,7 @@ fun FileCard(
                         text = { Text(context.resources.getString(R.string.mainscreen_delete)) },
                         onClick = {
                             expandedMenu = false
-                            deleteFile(context, uri)
-                            updateFiles()
+                            showDeleteDialog = true
                         }
                     )
                 }

@@ -18,6 +18,8 @@
     <string name="mainscreen_newFile">New</string>
     <string name="mainscreen_openFile">Open</string>
     <string name="mainscreen_all">All</string>
+    <string name="mainscreen_deleteWarningTitle">Removing Document</string>
+    <string name="mainscreen_deleteWarningMessage">The document is going to removed. Are you sure?</string>
 
     <string name="wordscreen_back">Back</string>
     <string name="wordscreen_undo">Undo</string>
