@@ -103,14 +103,15 @@ class ExcelToLuckysheetConverter {
             rowlen = if (rowHeights.isNotEmpty()) rowHeights else null,
             borderInfo = if (rangeBorderInfo.isNotEmpty()) rangeBorderInfo else null
         )
-
+        val calcChain = createCalculationChain(sheet, sheetIndex)
         return LuckysheetSheet(
             name = sheet.sheetName ?: "Sheet${sheetIndex + 1}",
             index = sheetIndex,
             celldata = if (cellData.isNotEmpty()) cellData else null,
             row = maxOf(maxRow + 1, LuckysheetConstants.DEFAULT_ROW_COUNT),
             column = maxOf(maxCol + 1, LuckysheetConstants.DEFAULT_COLUMN_COUNT),
-            config = config
+            config = config,
+            calcChain = if (calcChain.isNotEmpty()) calcChain else null
         )
     }
     private fun createBorderInfo(sheet: XSSFSheet, maxRow: Int, maxCol: Int): List<Map<String, Any>> {
@@ -543,5 +544,36 @@ class ExcelToLuckysheetConverter {
             cellStyle.shrinkToFit -> "0"      // clip (shrink to fit)
             else -> "0"                        // overflow (default)
         }
+    }
+    private fun createCalculationChain(sheet: XSSFSheet, sheetIndex: Int): List<LuckysheetCalcChain> {
+        val calcChain = mutableListOf<LuckysheetCalcChain>()
+
+        for (row in sheet) {
+            for (cell in row) {
+                if (cell.cellType == CellType.FORMULA) {
+                    try {
+                        val cachedValue = when (cell.cachedFormulaResultType) {
+                            CellType.NUMERIC -> cell.numericCellValue
+                            CellType.STRING -> cell.stringCellValue
+                            CellType.BOOLEAN -> cell.booleanCellValue
+                            else -> 0.0
+                        }
+
+                        calcChain.add(
+                            LuckysheetCalcChain(
+                                r = cell.rowIndex,
+                                c = cell.columnIndex,
+                                index = sheetIndex.toString(),
+                                func = listOf(true, cachedValue, "=" + cell.cellFormula)
+                            )
+                        )
+                    } catch (e: Exception) {
+                        Log.w(TAG, "Could not create calc chain for cell ${cell.rowIndex},${cell.columnIndex}")
+                    }
+                }
+            }
+        }
+
+        return calcChain
     }
 }
