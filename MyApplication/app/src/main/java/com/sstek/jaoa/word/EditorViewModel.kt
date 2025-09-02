@@ -50,7 +50,13 @@ class EditorViewModel(application: Application) : AndroidViewModel(application) 
             val application = getApplication<Application>()
             val inputStream = if (uri.scheme == "content") {
                 Log.d("EditorViewModel", "uri=$uri")
-                application.contentResolver.openInputStream(uri)
+                try {
+                    application.contentResolver.openInputStream(uri)
+                } catch (e: Exception) {
+                    Log.d("EditorViewModel", "${e.message}")
+                    _isLoading.value = false
+                    return@launch
+                }
             } else if (uri.scheme == "file" || uri.scheme == null) {
                 Log.d("EditorViewModel", "${uri.path}")
                 try {

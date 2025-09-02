@@ -1,5 +1,7 @@
 package com.sstek.jaoa.core
 
+import org.jsoup.nodes.TextNode
+
 enum class FileType(val extension: String) {
     // Word
     DOCX("docx"),
@@ -19,6 +21,14 @@ enum class FileType(val extension: String) {
         fun fromFileName(name: String): FileType {
             val ext = name.substringAfterLast('.', "").lowercase()
             return values().find { it.extension == ext } ?: FileType.UNKNOWN
+        }
+
+        fun fromMime(mime: String): FileType {
+            when (mime) {
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document" -> return DOCX
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" -> return XLSX
+                else -> return UNKNOWN
+            }
         }
     }
 }

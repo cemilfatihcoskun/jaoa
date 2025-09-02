@@ -1,6 +1,8 @@
 <resources>
     <string name="app_name">S Ofis</string>
 
+    <string name="mainactivity_unknownFileTypeError">Desteklenmeyen Dosya Biçimi</string>
+
     <string name="mainscreen_internalStorage">İç Depolama</string>
     <string name="mainscreen_externalStorage">Dış Depolama</string>
     <string name="mainscreen_search">Ara</string>
@@ -20,7 +22,7 @@
     <string name="mainscreen_all">Tümü</string>
     <string name="mainscreen_deleteWarningTitle">Doküman Silme</string>
     <string name="mainscreen_deleteWarningMessage">Doküman silenecek. Emin misiniz?</string>
-
+    <string name="mainscreen_deleteSuccessMessage">Doküman başarıyla silindi.</string>
 
     <string name="wordscreen_back">Geri</string>
     <string name="wordscreen_undo">Önceki</string>
@@ -72,5 +74,6 @@
     <string name="excelscreen_unsavedChangesContent">Kaydedilmemiş değişiklikler var. Çıkmak istediğinize emin misiniz?</string>
     <string name="excelscreen_confirm">Evet</string>
     <string name="excelscreen_cancel">İptal</string>
+
 
 </resources>

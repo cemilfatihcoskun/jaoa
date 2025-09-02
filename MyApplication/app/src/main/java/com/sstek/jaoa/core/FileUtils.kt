@@ -1,6 +1,9 @@
 package com.sstek.jaoa.core
 
+import android.content.ClipData
+import android.content.ContentValues
 import android.content.Context
+import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
@@ -10,49 +13,94 @@ import android.widget.Toast
 import java.io.File
 import com.sstek.jaoa.R
 
-
-// Ortak dosya silme
 fun deleteFile(context: Context, uri: Uri) {
-    val file = File(uri.path!!)
-    if (file.exists() && file.delete()) {
-        Log.d("FileUtils", "Dosya silindi.")
-    } else {
-        Log.d("FileUtils", "Dosya silinemedi.")
+    try {
+        val rowsDeleted = context.contentResolver.delete(uri, null, null)
+        if (rowsDeleted > 0) Log.d("FileUtils", "Dosya silindi.")
+        else Log.d("FileUtils", "Dosya silinemedi.")
+    } catch (e: Exception) {
+        Log.e("FileUtils", "Dosya silme hatası: ${e.message}", e)
     }
 }
 
-
-// Ortak yeniden adlandırma
 fun renameFile(context: Context, uri: Uri, newName: String) {
-    val file = File(uri.path!!)
-    if (!file.exists()) return
+    try {
+        val values = ContentValues().apply { put(MediaStore.MediaColumns.DISPLAY_NAME, newName) }
+        val rowsUpdated = context.contentResolver.update(uri, values, null, null)
+        if (rowsUpdated > 0) Log.d("FileUtils", "Dosya yeniden adlandırıldı: $newName")
+        else Log.d("FileUtils", "Yeniden adlandırma başarısız")
+    } catch (e: Exception) {
+        Log.e("FileUtils", "Rename hatası: ${e.message}", e)
+    }
+}
 
-    val newFile = File(file.parentFile, newName)
-    if (file.renameTo(newFile)) {
-        Log.d("FileUtils", "Dosya yeniden adlandırıldı: ${file.name} -> $newName")
-    } else {
-        Log.d("FileUtils", "Yeniden adlandırma başarısız")
+fun shareFile(context: Context, uri: Uri, displayName: String) {
+    try {
+        val tempFile = File(context.cacheDir, displayName)
+        tempFile.deleteOnExit()
+
+        context.contentResolver.openInputStream(uri)?.use { input ->
+            tempFile.outputStream().use { output ->
+                input.copyTo(output)
+            }
+        }
+
+        val fileUri = androidx.core.content.FileProvider.getUriForFile(
+            context,
+            "${context.packageName}.fileprovider",
+            tempFile
+        )
+
+        val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+            type = "*/*"
+            putExtra(android.content.Intent.EXTRA_STREAM, fileUri)
+            addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+
+        context.startActivity(android.content.Intent.createChooser(intent, context.getString(R.string.fileutils_share)))
+
+    } catch (e: Exception) {
+        e.printStackTrace()
+        Toast.makeText(context, "Paylaşma sırasında hata oluştu", Toast.LENGTH_SHORT).show()
     }
 }
 
 
-// Ortak paylaşma
-fun shareFile(context: android.content.Context, uri: Uri) {
-    val file = File(uri.path!!)
-    if (!file.exists()) return
-
-    val fileUri = androidx.core.content.FileProvider.getUriForFile(
-        context,
-        "${context.packageName}.fileprovider",
-        file
-    )
-    val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
-        type = "*/*"
-        putExtra(android.content.Intent.EXTRA_STREAM, fileUri)
-        addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+// MediaStore üzerine kaydetme (Documents/Public)
+fun saveToMediaStore(context: Context, fileName: String, fileType: FileType, content: ByteArray): Uri? {
+    val resolver = context.contentResolver
+    val collection = when (fileType) {
+        FileType.DOCX, FileType.DOC -> MediaStore.Files.getContentUri("external")
+        FileType.XLSX, FileType.XLS -> MediaStore.Files.getContentUri("external")
+        else -> MediaStore.Files.getContentUri("external")
     }
-    context.startActivity(android.content.Intent.createChooser(intent, context.resources.getString(R.string.fileutils_share)))
+
+    val values = ContentValues().apply {
+        put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
+        put(MediaStore.MediaColumns.MIME_TYPE, when (fileType) {
+            FileType.DOCX -> "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            FileType.DOC -> "application/msword"
+            FileType.XLSX -> "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            FileType.XLS -> "application/vnd.ms-excel"
+            else -> "*/*"
+        })
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            put(MediaStore.MediaColumns.RELATIVE_PATH, "Documents/JAOA")
+        }
+    }
+
+    return try {
+        val uri = resolver.insert(collection, values)
+        uri?.let {
+            resolver.openOutputStream(uri)?.use { stream -> stream.write(content) }
+        }
+        uri
+    } catch (e: Exception) {
+        Log.e("FileUtils", "Kaydetme hatası: ${e.message}", e)
+        null
+    }
 }
+
 
 // Internal storage için FileUtils wrapper
 fun getInternalFiles(context: Context, extensions: List<FileType>): List<Pair<String, Uri>> {
@@ -82,7 +130,7 @@ fun isNotTrashed(file: File): Boolean {
             !name.startsWith(".trashed")
 }
 
-
+/*
 fun getDocxFilesWithFileApi(context: Context, extensions: List<FileType>): List<Pair<String, Uri>> {
     val docxList = mutableListOf<Triple<String, Uri, String>>()
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && !Environment.isExternalStorageManager()) {
@@ -132,41 +180,47 @@ fun getDocxFilesWithFileApi(context: Context, extensions: List<FileType>): List<
 
     return docxList.distinctBy { it.third }.map { it.first to it.second }
 }
+*/
 
 
-fun getDocxFilesWithMediaStore(context: Context, extensions: List<FileType>): List<Pair<String, Uri>> {
-    val docxList = mutableListOf<Pair<String, Uri>>()
+
+fun getFilesFromMediaStore(context: Context, fileTypes: List<FileType>): List<Pair<String, Uri>> {
+    val files = mutableListOf<Pair<String, Uri>>()
+    val resolver = context.contentResolver
     val uri = MediaStore.Files.getContentUri("external")
-    val projection = arrayOf(MediaStore.Files.FileColumns._ID, MediaStore.Files.FileColumns.DISPLAY_NAME)
 
-    // selection = "LOWER(display_name) LIKE ? OR LOWER(display_name) LIKE ? OR ..."
-    val selection = extensions.joinToString(separator = " OR ") {
-        "LOWER(${MediaStore.Files.FileColumns.DISPLAY_NAME}) LIKE ?"
-    }
-    val selectionArgs = extensions.map { "%.${it.extension.lowercase()}" }.toTypedArray()
+    val projection = arrayOf(
+        MediaStore.Files.FileColumns._ID,
+        MediaStore.Files.FileColumns.DISPLAY_NAME,
+        MediaStore.Files.FileColumns.MIME_TYPE
+    )
 
-    val sortOrder = "${MediaStore.Files.FileColumns.DATE_ADDED} DESC"
+    // Uzantılara göre filtreleme
+    val extensions = fileTypes.map { it.extension.lowercase() }.filter { it.isNotEmpty() }
+    if (extensions.isEmpty()) return emptyList()
 
-    context.contentResolver.query(uri, projection, selection, selectionArgs, sortOrder)?.use { cursor ->
-        val idCol = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns._ID)
-        val nameCol = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DISPLAY_NAME)
+    val selection = extensions.joinToString(" OR ") { "${MediaStore.Files.FileColumns.DISPLAY_NAME} LIKE ?" }
+    val selectionArgs = extensions.map { "%.$it" }.toTypedArray()
+
+    resolver.query(uri, projection, selection, selectionArgs, null)?.use { cursor ->
+        val idIndex = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns._ID)
+        val nameIndex = cursor.getColumnIndexOrThrow(MediaStore.Files.FileColumns.DISPLAY_NAME)
 
         while (cursor.moveToNext()) {
-            val id = cursor.getLong(idCol)
-            val name = cursor.getString(nameCol)
+            val id = cursor.getLong(idIndex)
+            val name = cursor.getString(nameIndex)
             val contentUri = Uri.withAppendedPath(uri, id.toString())
-            docxList += name to contentUri
+            files.add(name to contentUri)
         }
     }
-    return docxList
+
+    return files
 }
 
+
+
 fun getAllFilesByExtensions(context: Context, extensions: List<FileType>): List<Pair<String, Uri>> {
-    return if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.S) {
-        getDocxFilesWithFileApi(context, extensions)
-    } else {
-        getDocxFilesWithFileApi(context, extensions)
-    }
+    return getFilesFromMediaStore(context, extensions)
 }
 
 fun saveToInternalStorage(context: Context, fileName: String, content: String): Uri? {

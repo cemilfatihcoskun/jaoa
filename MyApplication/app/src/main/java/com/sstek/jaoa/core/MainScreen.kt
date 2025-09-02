@@ -1,42 +1,20 @@
 package com.sstek.jaoa.core
 
 import android.annotation.SuppressLint
-import android.content.Intent
+import android.content.Context
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
-import android.provider.Settings
-import android.util.LayoutDirection
-import android.util.Log
 import android.widget.Toast
 import androidx.annotation.RequiresApi
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.calculateEndPadding
-import androidx.compose.foundation.layout.calculateStartPadding
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Description
-import androidx.compose.material.icons.filled.FolderOpen
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.TableChart
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -47,10 +25,19 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.LocalLifecycleOwner
-
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sstek.jaoa.R
+
+// ViewModel
+class MainScreenViewModel : ViewModel() {
+    var files = mutableStateListOf<Pair<String, Uri>>()
+    var showNewFileMenu = mutableStateOf(false)
+    var searchQuery = mutableStateOf("")
+    var selectedFilter = mutableStateOf<FileType?>(null)
+    var selectedTabIndex = mutableStateOf(1) // 0 = Internal, 1 = External
+}
 
 @RequiresApi(Build.VERSION_CODES.R)
 @SuppressLint("UnrememberedMutableState")
@@ -60,57 +47,49 @@ fun MainScreen(
     onCreateNew: (FileType) -> Unit
 ) {
     val context = LocalContext.current
-    var files by remember { mutableStateOf<List<Pair<String, Uri>>>(emptyList()) }
-    var showNewFileMenu by remember { mutableStateOf(false) }
-    var searchQuery by remember { mutableStateOf("") }
-    var selectedFilter by remember { mutableStateOf<FileType?>(null) } // null = tümü
-    var selectedTabIndex by remember { mutableStateOf(0) } // 0 = Internal, 1 = External
+    val viewModel: MainScreenViewModel = viewModel()
 
-    val extensions = listOf(FileType.DOCX, FileType.XLSX)
+    val showNewFileMenu by viewModel.showNewFileMenu
+    val searchQuery by viewModel.searchQuery
+    val selectedFilter by viewModel.selectedFilter
+    val selectedTabIndex by viewModel.selectedTabIndex
+    val allFiles = viewModel.files
 
-    var hasStoragePermission by remember { mutableStateOf(Environment.isExternalStorageManager()) }
+    val hasStoragePermission by remember { mutableStateOf(Environment.isExternalStorageManager()) }
 
-    val updateFiles: () -> Unit = {
-        val allFiles = if (selectedTabIndex == 0) {
-            getInternalFiles(context, extensions)
-        } else {
-            if (hasStoragePermission) {
-                getExternalFiles(context, extensions)
-            } else {
-                emptyList()
-            }
-        }
-
-
-        files = allFiles.filter { (name, _) ->
+    // Reactive filtered files
+    val filteredFiles by derivedStateOf {
+        allFiles.filter { (name, _) ->
             (searchQuery.isBlank() || name.contains(searchQuery, ignoreCase = true)) &&
                     (selectedFilter == null || FileType.fromFileName(name) == selectedFilter)
         }
     }
 
-    // LIFECYCLE Listener
-    val lifecycleOwner: LifecycleOwner = LocalLifecycleOwner.current
+    val updateFiles: () -> Unit = {
+        val filesList = if (selectedTabIndex == 0) {
+            getInternalFiles(context, listOf(FileType.DOCX, FileType.XLSX))
+        } else {
+            if (hasStoragePermission) getExternalFiles(context, listOf(FileType.DOCX, FileType.XLSX))
+            else emptyList()
+        }
+        viewModel.files.clear()
+        viewModel.files.addAll(filesList)
+    }
+
+    val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
-                hasStoragePermission = Environment.isExternalStorageManager()
                 updateFiles()
             }
         }
-
         lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose {
-            lifecycleOwner.lifecycle.removeObserver(observer)
-        }
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    val filePickerLauncher = rememberFilePickerLauncher(
-        context,
-        mutableStateOf(files),
-        onOpenFile
-    )
+    // File picker launcher (kendi implementasyonunu kullan)
+    val filePickerLauncher = rememberFilePickerLauncher(context, onOpenFile)
 
-    // Dosyaları güncelle
     LaunchedEffect(selectedTabIndex, searchQuery, selectedFilter) {
         updateFiles()
     }
@@ -123,36 +102,31 @@ fun MainScreen(
                         .statusBarsPadding()
                         .padding(8.dp)
                 ) {
-
-
-                    // TabRow: Internal / External
                     val tabs = listOf(
-                        context.resources.getString(R.string.mainscreen_internalStorage),
-                        context.resources.getString(R.string.mainscreen_externalStorage)
+                        context.getString(R.string.mainscreen_internalStorage),
+                        context.getString(R.string.mainscreen_externalStorage)
                     )
                     TabRow(selectedTabIndex = selectedTabIndex) {
                         tabs.forEachIndexed { index, title ->
                             Tab(
                                 selected = selectedTabIndex == index,
-                                onClick = { selectedTabIndex = index },
+                                onClick = { viewModel.selectedTabIndex.value = index },
                                 text = { Text(title) }
                             )
                         }
                     }
 
-                    // Search bar
                     OutlinedTextField(
                         value = searchQuery,
-                        onValueChange = { searchQuery = it },
+                        onValueChange = { viewModel.searchQuery.value = it },
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(top = 8.dp, bottom = 4.dp),
-                        placeholder = { Text(context.resources.getString(R.string.mainscreen_search)) },
+                        placeholder = { Text(context.getString(R.string.mainscreen_search)) },
                         shape = RoundedCornerShape(30),
                         singleLine = true
                     )
 
-                    // Filter buttons
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -160,30 +134,27 @@ fun MainScreen(
                         horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
                         FilterButton(
-                            label = context.resources.getString(R.string.mainscreen_all),
+                            label = context.getString(R.string.mainscreen_all),
                             icon = Icons.Default.FolderOpen,
-                            isSelected = selectedFilter == null,
-                            onClick = { selectedFilter = null }
-                        )
+                            isSelected = selectedFilter == null
+                        ) { viewModel.selectedFilter.value = null }
+
                         FilterButton(
                             label = "Docx",
                             icon = Icons.Default.Description,
-                            isSelected = selectedFilter == FileType.DOCX,
-                            onClick = { selectedFilter = FileType.DOCX }
-                        )
+                            isSelected = selectedFilter == FileType.DOCX
+                        ) { viewModel.selectedFilter.value = FileType.DOCX }
+
                         FilterButton(
                             label = "Xlsx",
                             icon = Icons.Default.TableChart,
-                            isSelected = selectedFilter == FileType.XLSX,
-                            onClick = { selectedFilter = FileType.XLSX }
-                        )
+                            isSelected = selectedFilter == FileType.XLSX
+                        ) { viewModel.selectedFilter.value = FileType.XLSX }
                     }
                 }
             },
             floatingActionButton = {
-                Column(
-                    horizontalAlignment = Alignment.End
-                ) {
+                Column(horizontalAlignment = Alignment.End) {
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(16.dp),
                         verticalAlignment = Alignment.Bottom,
@@ -204,55 +175,47 @@ fun MainScreen(
                                     ).show()
                                 }
                             },
-                        ) {
-                            Icon(Icons.Default.FolderOpen, contentDescription = context.resources.getString(R.string.mainscreen_openFile))
-                        }
-                        FloatingActionButton(
-                            onClick = { showNewFileMenu = true }
-                        ) {
-                            Icon(Icons.Default.Add, contentDescription = context.resources.getString(R.string.mainscreen_newFile))
-                        }
-                    }
+                        ) { Icon(Icons.Default.FolderOpen, contentDescription = context.getString(R.string.mainscreen_openFile)) }
 
+                        FloatingActionButton(
+                            onClick = { viewModel.showNewFileMenu.value = true }
+                        ) { Icon(Icons.Default.Add, contentDescription = context.getString(R.string.mainscreen_newFile)) }
+                    }
 
                     DropdownMenu(
                         expanded = showNewFileMenu,
-                        onDismissRequest = { showNewFileMenu = false }
+                        onDismissRequest = { viewModel.showNewFileMenu.value = false }
                     ) {
                         DropdownMenuItem(
-                            text = { Text(context.resources.getString(R.string.mainscreen_wordDocument)) },
+                            text = { Text(context.getString(R.string.mainscreen_wordDocument)) },
                             onClick = {
                                 onCreateNew(FileType.DOCX)
-                                showNewFileMenu = false
+                                viewModel.showNewFileMenu.value = false
                             }
                         )
                         DropdownMenuItem(
-                            text = { Text(context.resources.getString(R.string.mainscreen_excelDocument)) },
+                            text = { Text(context.getString(R.string.mainscreen_excelDocument)) },
                             onClick = {
                                 onCreateNew(FileType.XLSX)
-                                showNewFileMenu = false
+                                viewModel.showNewFileMenu.value = false
                             }
                         )
                         DropdownMenuItem(
-                            text = { Text(context.resources.getString(R.string.mainscreen_powerpointDocument)) },
+                            text = { Text(context.getString(R.string.mainscreen_powerpointDocument)) },
                             onClick = {
                                 onCreateNew(FileType.PPTX)
-                                showNewFileMenu = false
+                                viewModel.showNewFileMenu.value = false
                             }
                         )
                     }
                 }
-
-
             },
             bottomBar = {
                 val layoutDirection = LocalLayoutDirection.current
                 Column(
                     modifier = Modifier
                         .statusBarsPadding()
-                        .padding(
-                            bottom = 48.dp,
-                        )
+                        .padding(bottom = 48.dp)
                 ) {
                     if (!hasStoragePermission) {
                         PermissionWarningCard()
@@ -270,29 +233,24 @@ fun MainScreen(
                         start = padding.calculateStartPadding(layoutDirection),
                         end = padding.calculateEndPadding(layoutDirection)
                     )
-                    .heightIn(min = 0.dp)
             ) {
-                items(files) { (name, uri) ->
+                items(filteredFiles, key = { it.second.toString() }) { (name, uri) ->
                     var expandedMenu by remember { mutableStateOf(false) }
                     FileCard(
-                        name,
-                        uri,
-                        onOpenFile,
+                        name = name,
+                        uri = uri,
+                        onOpenFile = onOpenFile,
                         expandedMenuState = { expandedMenu = it },
                         isInternal = selectedTabIndex == 0,
-                        updateFiles
+                        updateFiles = updateFiles
                     )
                 }
 
-                item {
-                    Spacer(modifier = Modifier.height(120.dp))
-                }
+                item { Spacer(modifier = Modifier.height(120.dp)) }
             }
         }
     }
 }
-
-
 
 @Composable
 fun FileCard(
@@ -311,19 +269,15 @@ fun FileCard(
 
     var showDeleteDialog by remember { mutableStateOf(false) }
 
-
-
-
-
     if (showRenameDialog) {
         AlertDialog(
             onDismissRequest = { showRenameDialog = false },
-            title = { Text(context.resources.getString(R.string.mainscreen_rename)) },
+            title = { Text(context.getString(R.string.mainscreen_rename)) },
             text = {
                 TextField(
                     value = newName,
                     onValueChange = { newName = it },
-                    label = { Text(context.resources.getString(R.string.mainscreen_newName)) },
+                    label = { Text(context.getString(R.string.mainscreen_newName)) },
                     singleLine = true
                 )
             },
@@ -332,15 +286,11 @@ fun FileCard(
                     renameFile(context, uri, newName)
                     showRenameDialog = false
                     updateFiles()
-                    Toast.makeText(context, context.resources.getString(R.string.mainscreen_renameSuccessMessage), Toast.LENGTH_SHORT).show()
-                }) {
-                    Text(context.resources.getString(R.string.mainscreen_confirm))
-                }
+                    Toast.makeText(context, context.getString(R.string.mainscreen_renameSuccessMessage), Toast.LENGTH_SHORT).show()
+                }) { Text(context.getString(R.string.mainscreen_confirm)) }
             },
             dismissButton = {
-                TextButton(onClick = { showRenameDialog = false }) {
-                    Text(context.resources.getString(R.string.mainscreen_dismiss))
-                }
+                TextButton(onClick = { showRenameDialog = false }) { Text(context.getString(R.string.mainscreen_dismiss)) }
             }
         )
     }
@@ -348,35 +298,27 @@ fun FileCard(
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            title = { Text(context.resources.getString(R.string.mainscreen_deleteWarningTitle)) },
-            text = { Text(context.resources.getString(R.string.mainscreen_deleteWarningMessage)) },
+            title = { Text(context.getString(R.string.mainscreen_deleteWarningTitle)) },
+            text = { Text(context.getString(R.string.mainscreen_deleteWarningMessage)) },
             confirmButton = {
                 TextButton(onClick = {
                     deleteFile(context, uri)
                     showDeleteDialog = false
                     updateFiles()
-                }) {
-                    Text(context.resources.getString(R.string.mainscreen_delete))
-                }
+                    Toast.makeText(context, context.getString(R.string.mainscreen_deleteSuccessMessage), Toast.LENGTH_SHORT).show()
+                }) { Text(context.getString(R.string.mainscreen_delete)) }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) {
-                    Text(context.resources.getString(R.string.mainscreen_dismiss))
-                }
+                TextButton(onClick = { showDeleteDialog = false }) { Text(context.getString(R.string.mainscreen_dismiss)) }
             }
         )
     }
 
-
-
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 4.dp,)
-            .clickable {
-                val fileType = FileType.fromFileName(name)
-                onOpenFile(fileType, uri)
-            }
+            .padding(horizontal = 8.dp, vertical = 4.dp)
+            .clickable { onOpenFile(FileType.fromFileName(name), uri) }
             .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(12.dp)),
         shape = RoundedCornerShape(12.dp),
         elevation = CardDefaults.cardElevation(8.dp),
@@ -393,42 +335,29 @@ fun FileCard(
             )
             Box {
                 IconButton(onClick = { expandedMenu = true; expandedMenuState(true) }) {
-                    Icon(Icons.Default.MoreVert, contentDescription = context.resources.getString(R.string.mainscreen_more))
+                    Icon(Icons.Default.MoreVert, contentDescription = context.getString(R.string.mainscreen_more))
                 }
                 DropdownMenu(
                     expanded = expandedMenu,
                     onDismissRequest = { expandedMenu = false; expandedMenuState(false) }
                 ) {
                     DropdownMenuItem(
-                        text = { Text(context.resources.getString(R.string.mainscreen_rename)) },
-                        onClick = {
-                            expandedMenu = false
-                            showRenameDialog = true
-                        }
+                        text = { Text(context.getString(R.string.mainscreen_rename)) },
+                        onClick = { expandedMenu = false; showRenameDialog = true }
                     )
                     DropdownMenuItem(
-                        text = { Text(context.resources.getString(R.string.mainscreen_delete)) },
-                        onClick = {
-                            expandedMenu = false
-                            showDeleteDialog = true
-                        }
+                        text = { Text(context.getString(R.string.mainscreen_delete)) },
+                        onClick = { expandedMenu = false; showDeleteDialog = true }
                     )
                     DropdownMenuItem(
-                        text = { Text(context.resources.getString(R.string.mainscreen_share)) },
-                        onClick = {
-                            expandedMenu = false
-                            shareFile(context, uri)
-                        }
+                        text = { Text(context.getString(R.string.mainscreen_share)) },
+                        onClick = { expandedMenu = false; shareFile(context, uri, name) }
                     )
                 }
             }
         }
     }
 }
-
-
-
-
 
 @Composable
 fun FilterButton(label: String, icon: ImageVector, isSelected: Boolean, onClick: () -> Unit) {

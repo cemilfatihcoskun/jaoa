@@ -13,16 +13,33 @@ import androidx.documentfile.provider.DocumentFile
 @Composable
 fun rememberFilePickerLauncher(
     context: Context,
-    files: MutableState<List<Pair<String, Uri>>>,
     onOpenFile: (FileType, Uri) -> Unit
 ) = rememberLauncherForActivityResult(
     contract = ActivityResultContracts.OpenDocument()
-) { uri ->
+) { uri: Uri? ->
     uri?.let {
         val name = DocumentFile.fromSingleUri(context, it)?.name ?: "Unknown"
         Log.d("FilePickerUtils", "Selected file: $name, Uri: $it")
-        context.contentResolver.takePersistableUriPermission(it, Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        files.value = files.value + (name to it)
+
+        val resolver = context.contentResolver
+        val persistedPermissions = resolver.persistedUriPermissions
+
+        try {
+            resolver.takePersistableUriPermission(
+                it,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                        Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+            )
+        } catch (e: SecurityException) {
+            Log.e("FilePickerUtils", "URI permission error: ${e.message}")
+        }
+
+        /*
+        for (perm in persistedPermissions) {
+            Log.d("FilePickerUtils", "${perm.uri} ${perm.isReadPermission} ${perm.isWritePermission}")
+        }
+         */
+
         val fileType = FileType.fromFileName(name)
         onOpenFile(fileType, it)
     }

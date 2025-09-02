@@ -1,6 +1,7 @@
 package com.sstek.jaoa
 
 import android.net.Uri
+import android.os.Build
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -10,9 +11,13 @@ import androidx.navigation.navArgument
 import com.sstek.jaoa.word.QuillEditorScreen
 import com.sstek.jaoa.core.MainScreen
 import android.util.Log
+import androidx.annotation.RequiresApi
 import com.sstek.jaoa.core.FileType
 import com.sstek.jaoa.excel.ExcelScreen
+import com.sstek.jaoa.core.decodeUri
+import com.sstek.jaoa.core.encodeUri
 
+@RequiresApi(Build.VERSION_CODES.R)
 @Composable
 fun ApplicationNavigationHost(navController: NavHostController) {
     NavHost(
@@ -35,7 +40,9 @@ fun ApplicationNavigationHost(navController: NavHostController) {
             arguments = listOf(navArgument("fileUri") { type = NavType.StringType })
         ) { backStackEntry ->
             val fileUriString = backStackEntry.arguments?.getString("fileUri")
-            val fileUri = fileUriString?.let { Uri.parse(it) }
+            val fileUri = fileUriString?.let { decodeUri(it) }
+
+            Log.d("AppNavHost", "word/fileUri ${fileUri}")
 
             QuillEditorScreen(
                 filePath = fileUri,
@@ -48,7 +55,7 @@ fun ApplicationNavigationHost(navController: NavHostController) {
             arguments = listOf(navArgument("fileUri") { type = NavType.StringType })
         ) { backStackEntry ->
             val fileUriString = backStackEntry.arguments?.getString("fileUri")
-            val fileUri = fileUriString?.let { Uri.parse(it) }
+            val fileUri = fileUriString?.let { decodeUri(it) }
 
             ExcelScreen(
                 filePath = fileUri,
@@ -62,8 +69,7 @@ fun ApplicationNavigationHost(navController: NavHostController) {
 fun navigate(navController: NavHostController, fileType: FileType, fileUri: Uri?) {
     var uriEncoded = ""
     if (fileUri != null) {
-        uriEncoded = fileUri.toString().replace("/", "%2F")
-
+        uriEncoded = encodeUri(fileUri)
     }
 
     Log.d("ApplicationNavigationHost", "$fileType, $fileUri")
@@ -78,3 +84,4 @@ fun navigate(navController: NavHostController, fileType: FileType, fileUri: Uri?
         FileType.UNKNOWN -> ""
     }
 }
+
