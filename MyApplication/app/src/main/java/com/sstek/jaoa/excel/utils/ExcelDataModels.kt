@@ -108,7 +108,11 @@ data class LuckysheetCalcChain(
     val r: Int,                // row
     val c: Int,                // column
     val index: String,         // sheet index
-    val func: List<Any>        // function chain
+    val func: List<Any>,       // [true, cachedValue, "=FORMULA"]
+    val color: String = "w",   // default color
+    val parent: Any? = null,   // parent reference
+    val chidren: Map<String, Any> = emptyMap(),
+    val times: Int = 0         // calculation times
 )
 
 

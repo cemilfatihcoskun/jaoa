@@ -185,6 +185,8 @@ class ExcelViewModel(application: Application) : AndroidViewModel(application) {
                         return@launch
                     }
                     Log.d("deneme",cleanResult);
+                    Log.d("DebugJSON", "Cleaned length: ${cleanResult.length}")
+                    Log.d("DebugJSON", "Last 500 chars: ${cleanResult.takeLast(1500)}")
                     val jsonData = JSONObject(cleanResult)
 
                     if (jsonData.getBoolean("success")) {
