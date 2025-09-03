@@ -166,7 +166,6 @@ class ExcelViewModel(application: Application) : AndroidViewModel(application) {
         performSave(webView, uri, isNewFile = true)
     }
 
-    // ✅ Ortak save fonksiyonu
     private fun performSave(webView: WebView, uri: Uri, isNewFile: Boolean = false) {
         _isLoading.value = true
 
@@ -194,30 +193,27 @@ class ExcelViewModel(application: Application) : AndroidViewModel(application) {
                         val sheetsData = sheetsArray.toString()
 
                         withContext(Dispatchers.IO) {
-                            val workbook = converter.convert(sheetsData)
-
-                            val outputStream = getApplication<Application>()
-                                .contentResolver.openOutputStream(uri)
-
-                            outputStream?.use { stream ->
-                                workbook.write(stream)
-                                Log.d("ExcelViewModel", "File written successfully to: $uri")
-                            } ?: run {
-                                Log.e("ExcelViewModel", "Could not open output stream for: $uri")
-                                _toastMessage.emit("Dosya yazılamadı.")
-                                return@withContext
-                            }
-
-                            workbook.close()
-
-                            // ✅ Yeni dosyaysa URI'yi güncelle
-                            if (isNewFile) {
-                                withContext(Dispatchers.Main) {
-                                    _selectedFileUri.value = uri
+                            converter.convert(sheetsData).use { workbook ->
+                                getApplication<Application>()
+                                    .contentResolver
+                                    .openOutputStream(uri, "rwt")
+                                    ?.use { stream ->
+                                        workbook.write(stream)
+                                        stream.flush() //Zip dosyası tam yazılsın
+                                        Log.d("ExcelViewModel", "File written successfully to: $uri")
+                                    } ?: run {
+                                    Log.e("ExcelViewModel", "Could not open output stream for: $uri")
+                                    _toastMessage.emit("Dosya yazılamadı.")
+                                    return@withContext
                                 }
-                                _toastMessage.emit("Dosya farklı kaydedildi.")
-                            } else {
-                                _toastMessage.emit("Dosya başarıyla kaydedildi.")
+                            }
+                            withContext(Dispatchers.Main) {
+                                if (isNewFile) {
+                                    _selectedFileUri.value = uri
+                                    _toastMessage.emit("Dosya farklı kaydedildi.")
+                                } else {
+                                    _toastMessage.emit("Dosya başarıyla kaydedildi.")
+                                }
                             }
                         }
                     } else {
