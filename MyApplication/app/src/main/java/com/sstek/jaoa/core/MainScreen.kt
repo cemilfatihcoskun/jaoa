@@ -104,7 +104,7 @@ fun MainScreen(
                 Column(
                     modifier = Modifier
                         .statusBarsPadding()
-                        .padding(8.dp)
+                        .padding(top = 8.dp, start = 8.dp, end = 8.dp, bottom = 0.dp)
                 ) {
                     val tabs = listOf(
                         context.getString(R.string.mainscreen_internalStorage),
@@ -191,7 +191,7 @@ fun MainScreen(
                 Column(
                     modifier = Modifier
                         .statusBarsPadding()
-                        .padding(bottom = 48.dp)
+                        .padding(bottom = 8.dp)
                 ) {
                     NewFileBottomBar(onCreateNew)
 
@@ -374,20 +374,20 @@ fun NewFileBottomBar(
         modifier = Modifier
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.surface)
-            .padding(4.dp)
+            .padding(horizontal = 4.dp) // Sadece küçük padding
     ) {
         Text(
             text = context.getString(R.string.mainscreen_createNewDocumentTitle),
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.align(Alignment.CenterHorizontally) // Ortala
+            modifier = Modifier.align(Alignment.CenterHorizontally)
         )
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(8.dp)) // Daha küçük boşluk
 
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp) // Daha küçük aralık
         ) {
             files.forEach { (title, iconRes, color) ->
                 Card(
@@ -408,8 +408,8 @@ fun NewFileBottomBar(
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(4.dp),
-                        verticalArrangement = Arrangement.Center,
+                            .padding(4.dp), // Küçük padding
+                        verticalArrangement = Arrangement.Top,
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Icon(
@@ -418,7 +418,7 @@ fun NewFileBottomBar(
                             modifier = Modifier.fillMaxSize(0.5f),
                             tint = Color.Unspecified
                         )
-                        Spacer(modifier = Modifier.height(4.dp))
+                        Spacer(modifier = Modifier.height(2.dp))
                         Text(
                             text = when(title) {
                                 "Word" -> "DOCX"
@@ -435,5 +435,3 @@ fun NewFileBottomBar(
         }
     }
 }
-
-
