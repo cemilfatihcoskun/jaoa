@@ -79,7 +79,7 @@ fun navigate(navController: NavHostController, fileType: FileType, fileUri: Uri?
         FileType.DOC -> TODO()
         FileType.XLSX -> navController.navigate("excel/$uriEncoded")
         FileType.XLS -> TODO()
-        FileType.PPTX -> TODO()
+        FileType.PPTX -> ""
         FileType.PPT -> TODO()
         FileType.UNKNOWN -> ""
     }
