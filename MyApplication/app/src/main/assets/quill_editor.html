@@ -4,10 +4,24 @@
   <meta charset="utf-8" />
   <title>Quill Editor Full</title>
 
+  <!--
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  -->
+
   <!-- Quill snow tema CSS -->
   <link href="quill.snow.css" rel="stylesheet" />
 
   <style>
+	body {
+		padding: 0;
+		margin: 0;
+	}
+	
+	@page {
+	  size: A4;
+	  margin: 40px 50px;
+	}
+	
     @font-face {
       font-family: 'jaoa_calibri';
       src: url('fonts/calibri.ttf') format('truetype');
@@ -45,7 +59,7 @@
     
 	#editor-container {
 		width: 794px;        /* A4 genişliği */
-		min-height: 1123px;  /* A4 yüksekliği */
+		height: auto;
 		margin: 40px auto;   /* üst-alt boşluk + ortalama */
 		padding: 16px;       /* içerik kenar boşluğu */
 		font-family: Arial, sans-serif;
@@ -53,7 +67,7 @@
 		
 		border: 1px solid #ccc;  /* tüm kenarlar */
 		box-sizing: border-box;   /* padding dahil etmesi için */
-		overflow-y: scroll;
+		overflow-y: visible !important;
 	}
 
     
@@ -102,6 +116,13 @@
   line-height: 1.15;
 	}
 
+.ql-editor {
+    width: 794px;
+    min-height: 1123px;
+    margin: 0 auto;
+    box-sizing: border-box;
+    padding: 40px;
+}
 
     
     .ql-lineheight option {
@@ -135,44 +156,64 @@
 }
 
 @media print {
+  /* Toolbar ve imleçleri gizle */
   .ql-toolbar,
-  .ql-cursor {
-    display: none !important;
-  }
-
-  html, body {
-    height: auto !important;
-    overflow: visible !important;
-  }
-  
-  #editor {
-    width: 100%;
-    min-height: auto;
-    padding: 0;
-  }
-  
+  .ql-cursor,
   .image-resize-overlay,
   .image-resize-display,
   .image-resize-toolbar {
     display: none !important;
-  }
-  
-  *:focus {
-    outline: none !important;
-    caret-color: transparent !important; /* İmleci gizle */
+    visibility: hidden !important;
   }
 
-  /* Quill editör içi için özel sınıf */
-  .ql-editor:focus {
-    outline: none !important;
-    caret-color: transparent !important;
+  /* Sayfa ayarları */
+  @page {
+    size: A4;
+    margin: 0;
+  }
+
+  html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    height: auto !important;
+    overflow: visible !important;
+    -webkit-print-color-adjust: exact;
+  }
+
+  /* Ana container ayarı */
+  #editor-container {
+    width: 794px; /* A4 genişliği */
+    min-height: auto !important;
+    height: auto !important;
+    padding: 16px !important; /* İç padding sabit */
+    margin: 0 auto !important;
+    border: none !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+    page-break-inside: avoid;
+    page-break-after: auto;
+    overflow-y: visible !important;
+  }
+
+  /* Quill editör içeriği */
+  .ql-editor {
+    padding: 0 !important;
+    margin: 0 !important;
+    line-height: 1.2 !important;
+    page-break-inside: auto;
+    page-break-after: auto;
+  }
+
+  /* Son satır kırılmasını engelle */
+  .ql-editor * {
+    page-break-inside: avoid;
   }
 }
 
-#editor {
-    width: 100%;   /* WebView genişliğine göre ölçeklenecek */
-    min-height: 100vh; /*
-}
+
+
+
+
 
   </style>
 </head>

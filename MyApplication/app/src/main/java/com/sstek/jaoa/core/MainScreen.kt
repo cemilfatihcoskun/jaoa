@@ -7,6 +7,7 @@ import android.os.Build
 import android.os.Environment
 import android.widget.Toast
 import androidx.annotation.RequiresApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -19,9 +20,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -158,6 +162,7 @@ fun MainScreen(
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(16.dp),
                         verticalAlignment = Alignment.Bottom,
+
                         modifier = Modifier.padding(end = 16.dp)
                     ) {
                         FloatingActionButton(
@@ -177,37 +182,8 @@ fun MainScreen(
                             },
                         ) { Icon(Icons.Default.FolderOpen, contentDescription = context.getString(R.string.mainscreen_openFile)) }
 
-                        FloatingActionButton(
-                            onClick = { viewModel.showNewFileMenu.value = true }
-                        ) { Icon(Icons.Default.Add, contentDescription = context.getString(R.string.mainscreen_newFile)) }
                     }
 
-                    DropdownMenu(
-                        expanded = showNewFileMenu,
-                        onDismissRequest = { viewModel.showNewFileMenu.value = false }
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text(context.getString(R.string.mainscreen_wordDocument)) },
-                            onClick = {
-                                onCreateNew(FileType.DOCX)
-                                viewModel.showNewFileMenu.value = false
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text(context.getString(R.string.mainscreen_excelDocument)) },
-                            onClick = {
-                                onCreateNew(FileType.XLSX)
-                                viewModel.showNewFileMenu.value = false
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text(context.getString(R.string.mainscreen_powerpointDocument)) },
-                            onClick = {
-                                onCreateNew(FileType.PPTX)
-                                viewModel.showNewFileMenu.value = false
-                            }
-                        )
-                    }
                 }
             },
             bottomBar = {
@@ -217,6 +193,8 @@ fun MainScreen(
                         .statusBarsPadding()
                         .padding(bottom = 48.dp)
                 ) {
+                    NewFileBottomBar(onCreateNew)
+
                     if (!hasStoragePermission) {
                         PermissionWarningCard()
                     }
@@ -379,3 +357,83 @@ fun FilterButton(label: String, icon: ImageVector, isSelected: Boolean, onClick:
         )
     }
 }
+
+@Composable
+fun NewFileBottomBar(
+    onCreateNew: (FileType) -> Unit
+) {
+    val context = LocalContext.current
+
+    val files = listOf(
+        Triple("Word", R.drawable.word_document, Color(0xFF1E3A8A)),       // Lacivert
+        Triple("Excel", R.drawable.excel_document, Color(0xFF16A34A)),     // Yeşil
+        Triple("PowerPoint", R.drawable.powerpoint_document, Color(0xFFF97316)) // Turuncu
+    )
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surface)
+            .padding(4.dp)
+    ) {
+        Text(
+            text = context.getString(R.string.mainscreen_createNewDocumentTitle),
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.align(Alignment.CenterHorizontally) // Ortala
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            files.forEach { (title, iconRes, color) ->
+                Card(
+                    modifier = Modifier
+                        .weight(1f)
+                        .size(48.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = color),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                    onClick = {
+                        when (title) {
+                            "Word" -> onCreateNew(FileType.DOCX)
+                            "Excel" -> onCreateNew(FileType.XLSX)
+                            "PowerPoint" -> onCreateNew(FileType.PPTX)
+                        }
+                    }
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(4.dp),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(
+                            painter = painterResource(id = iconRes),
+                            contentDescription = title,
+                            modifier = Modifier.fillMaxSize(0.5f),
+                            tint = Color.Unspecified
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = when(title) {
+                                "Word" -> "DOCX"
+                                "Excel" -> "XLSX"
+                                "PowerPoint" -> "PPTX"
+                                else -> ""
+                            },
+                            color = Color.White,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+

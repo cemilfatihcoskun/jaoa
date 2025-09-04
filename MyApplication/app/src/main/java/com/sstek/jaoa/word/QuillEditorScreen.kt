@@ -87,7 +87,7 @@ fun QuillEditorScreen(
     LaunchedEffect(webView) {
         while (true) {
             webView?.evaluateJavascript(
-                """
+            """
                 (function() {
                     const pageHeight = 1123;
                     const totalHeight = document.body.scrollHeight;
@@ -96,7 +96,7 @@ fun QuillEditorScreen(
                     const totalPages = Math.ceil(totalHeight / pageHeight);
                     return [currentPage, totalPages];
                 })();
-                """.trimIndent()
+            """
             ) { result ->
                 try {
                     val numbers = result
@@ -111,6 +111,7 @@ fun QuillEditorScreen(
             kotlinx.coroutines.delay(500)
         }
     }
+
 
     LaunchedEffect(filePath) {
         if (filePath != null) {
@@ -270,9 +271,12 @@ fun QuillEditorScreen(
 
                         settings.useWideViewPort = true
                         settings.loadWithOverviewMode = true
+                        settings.textZoom = 100
 
                         settings.builtInZoomControls = true
                         settings.displayZoomControls = false
+
+                        setInitialScale(100)
 
                         webChromeClient = myWebChromeClient
                         webViewClient = QuillWebViewClient {

@@ -23,6 +23,7 @@
     <string name="mainscreen_deleteWarningTitle">Doküman Silme</string>
     <string name="mainscreen_deleteWarningMessage">Doküman silenecek. Emin misiniz?</string>
     <string name="mainscreen_deleteSuccessMessage">Doküman başarıyla silindi.</string>
+    <string name="mainscreen_createNewDocumentTitle">Yeni Döküman Oluştur</string>
 
     <string name="wordscreen_back">Geri</string>
     <string name="wordscreen_undo">Önceki</string>

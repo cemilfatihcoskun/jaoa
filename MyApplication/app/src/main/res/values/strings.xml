@@ -23,6 +23,7 @@
     <string name="mainscreen_deleteWarningTitle">Removing Document</string>
     <string name="mainscreen_deleteWarningMessage">The document is going to removed. Are you sure?</string>
     <string name="mainscreen_deleteSuccessMessage">The document deleted successfully.</string>
+    <string name="mainscreen_createNewDocumentTitle">Create New Document</string>
 
     <string name="wordscreen_back">Back</string>
     <string name="wordscreen_undo">Undo</string>
@@ -74,6 +75,7 @@
     <string name="excelscreen_unsavedChangesContent">There are modifications that are not saved. Are you sure to exit?</string>
     <string name="excelscreen_confirm">Yes</string>
     <string name="excelscreen_cancel">Cancel</string>
+
 
 
 </resources>
