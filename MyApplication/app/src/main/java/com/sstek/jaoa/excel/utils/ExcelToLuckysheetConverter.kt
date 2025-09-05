@@ -53,57 +53,23 @@ class ExcelToLuckysheetConverter {
             }
         }
 
-        // Merge, column/row sizes
-        val mergeObject = mutableMapOf<String, Map<String, Int>>()
-        for (mergedRegion in sheet.mergedRegions) {
-            val key = "${mergedRegion.firstRow}_${mergedRegion.firstColumn}"
-            mergeObject[key] = mapOf(
-                "r" to mergedRegion.firstRow,
-                "c" to mergedRegion.firstColumn,
-                "rs" to (mergedRegion.lastRow - mergedRegion.firstRow + 1),
-                "cs" to (mergedRegion.lastColumn - mergedRegion.firstColumn + 1)
-            )
-        }
+        val mergeProcessor = MergeProcessor()
+        val mergeObject = mergeProcessor.extractMergedRanges(sheet)
 
-        val columnWidths = mutableMapOf<String, Double>()
-        val rowHeights = mutableMapOf<String, Double>()
+        val dimensionProcessor = DimensionProcessor()
+        val dimensions = dimensionProcessor.extractDimensions(sheet, maxRow, maxCol)
 
-        for (col in 0..maxCol) {
-            val widthUnits = sheet.getColumnWidth(col)
-            val defaultUnits = (sheet.defaultColumnWidth * 256).toInt()
-
-            Log.d(TAG, "Column $col: widthUnits=$widthUnits, defaultUnits=$defaultUnits")
-
-            if (widthUnits != defaultUnits) {
-                val pixels = excelColumnWidthToPx(widthUnits)
-                columnWidths[col.toString()] = pixels.toDouble()
-                Log.d(TAG, "Column $col: ${widthUnits} units → ${pixels} px")
-            } else {
-                Log.d(TAG, "Column $col: Using default width, skipping")
-            }
-        }
-
-        for (rowNum in 0..maxRow) {
-            val row = sheet.getRow(rowNum) ?: continue
-            val heightTwips = row.height
-            val defaultTwips = sheet.defaultRowHeight
-
-            if (heightTwips != defaultTwips) {
-                val pixels = excelRowHeightToPx(heightTwips)
-                rowHeights[rowNum.toString()] = pixels.toDouble()
-                Log.d(TAG, "Row $rowNum: ${heightTwips} twips → ${pixels} px")
-            }
-        }
-
-        val rangeBorderInfo = createBorderInfo(sheet, maxRow, maxCol)
+        val borderProcessor = BorderProcessor()
+        val rangeBorderInfo = borderProcessor.createBorderInfo(sheet, maxRow, maxCol)
 
         val config = LuckysheetConfig(
-            merge = if (mergeObject.isNotEmpty()) mergeObject else null,
-            columnlen = if (columnWidths.isNotEmpty()) columnWidths else null,
-            rowlen = if (rowHeights.isNotEmpty()) rowHeights else null,
+            merge = mergeObject,
+            columnlen = dimensions.columnWidths,
+            rowlen = dimensions.rowHeights,
             borderInfo = if (rangeBorderInfo.isNotEmpty()) rangeBorderInfo else null
         )
-        val calcChain = createCalculationChain(sheet, sheetIndex)
+        val formulaProcessor = FormulaProcessor()
+        val calcChain = formulaProcessor.createCalculationChain(sheet, sheetIndex)
         return LuckysheetSheet(
             name = sheet.sheetName ?: "Sheet${sheetIndex + 1}",
             index = sheetIndex,
@@ -114,135 +80,10 @@ class ExcelToLuckysheetConverter {
             calcChain = if (calcChain.isNotEmpty()) calcChain else null
         )
     }
-    private fun createBorderInfo(sheet: XSSFSheet, maxRow: Int, maxCol: Int): List<Map<String, Any>> {
-        val borderInfo = mutableListOf<Map<String, Any>>()
-
-        try {
-            Log.d(TAG, "🔍 Reading borders directly from Excel...")
-
-            for (r in 0..maxRow) {
-                val row = sheet.getRow(r) ?: continue
-                for (c in 0..maxCol) {
-                    val cell = row.getCell(c) ?: continue
-                    val style = cell.cellStyle
-
-                    val hasTop = style.borderTop != BorderStyle.NONE
-                    val hasBottom = style.borderBottom != BorderStyle.NONE
-                    val hasLeft = style.borderLeft != BorderStyle.NONE
-                    val hasRight = style.borderRight != BorderStyle.NONE
-
-                    if (hasTop || hasBottom || hasLeft || hasRight) {
-
-                        if (hasTop && hasBottom && hasLeft && hasRight &&
-                            isSameStyleAndColor(style)) {
-
-                            borderInfo.add(mapOf(
-                                "rangeType" to "range",
-                                "borderType" to "border-all",
-                                "style" to extractBorderStyleForSide(style, "top"),
-                                "color" to (BackgroundAndBorderColorUtils.extractBorderColor(style, "top")),
-                                "range" to listOf(mapOf(
-                                    "row" to listOf(r, r),
-                                    "column" to listOf(c, c)
-                                ))
-                            ))
-                        } else {
-                            addIndividualBorders(borderInfo, r, c, style)
-                        }
-                    }
-                }
-            }
-
-        } catch (e: Exception) {
-            Log.e(TAG, "Border reading failed: ${e.message}")
-        }
-
-        Log.d(TAG, "🔍 Border reading completed: ${borderInfo.size} entries")
-        return borderInfo
-    }
-
-    private fun isSameStyleAndColor(style: CellStyle): Boolean {
-        return try {
-            val topStyle = extractBorderStyleForSide(style, "top")
-            val bottomStyle = extractBorderStyleForSide(style, "bottom")
-            val leftStyle = extractBorderStyleForSide(style, "left")
-            val rightStyle = extractBorderStyleForSide(style, "right")
-
-            val topColor = BackgroundAndBorderColorUtils.extractBorderColor(style, "top")
-            val bottomColor = BackgroundAndBorderColorUtils.extractBorderColor(style, "bottom")
-            val leftColor = BackgroundAndBorderColorUtils.extractBorderColor(style, "left")
-            val rightColor = BackgroundAndBorderColorUtils.extractBorderColor(style, "right")
-
-            topStyle == bottomStyle && bottomStyle == leftStyle && leftStyle == rightStyle &&
-                    topColor == bottomColor && bottomColor == leftColor && leftColor == rightColor
-        } catch (e: Exception) {
-            false
-        }
-    }
-
-    private fun addIndividualBorders(
-        borderInfo: MutableList<Map<String, Any>>,
-        r: Int,
-        c: Int,
-        style: CellStyle
-    ) {
-
-        if (style.borderTop != BorderStyle.NONE) {
-            borderInfo.add(mapOf(
-                "rangeType" to "range",
-                "borderType" to "border-top",
-                "style" to extractBorderStyleForSide(style, "top"),
-                "color" to (BackgroundAndBorderColorUtils.extractBorderColor(style, "top")),
-                "range" to listOf(mapOf(
-                    "row" to listOf(r, r),
-                    "column" to listOf(c, c)
-                ))
-            ))
-        }
-
-
-        if (style.borderBottom != BorderStyle.NONE) {
-            borderInfo.add(mapOf(
-                "rangeType" to "range",
-                "borderType" to "border-bottom",
-                "style" to extractBorderStyleForSide(style, "bottom"),
-                "color" to (BackgroundAndBorderColorUtils.extractBorderColor(style, "bottom")),
-                "range" to listOf(mapOf(
-                    "row" to listOf(r, r),
-                    "column" to listOf(c, c)
-                ))
-            ))
-        }
-
-        if (style.borderLeft != BorderStyle.NONE) {
-            borderInfo.add(mapOf(
-                "rangeType" to "range",
-                "borderType" to "border-left",
-                "style" to extractBorderStyleForSide(style, "left"),
-                "color" to (BackgroundAndBorderColorUtils.extractBorderColor(style, "left")),
-                "range" to listOf(mapOf(
-                    "row" to listOf(r, r),
-                    "column" to listOf(c, c)
-                ))
-            ))
-        }
-
-        if (style.borderRight != BorderStyle.NONE) {
-            borderInfo.add(mapOf(
-                "rangeType" to "range",
-                "borderType" to "border-right",
-                "style" to extractBorderStyleForSide(style, "right"),
-                "color" to (BackgroundAndBorderColorUtils.extractBorderColor(style, "right")),
-                "range" to listOf(mapOf(
-                    "row" to listOf(r, r),
-                    "column" to listOf(c, c)
-                ))
-            ))
-        }
-    }
 
     private fun convertCell(cell: Cell): LuckysheetCell? {
         try {
+            val formulaProcessor = FormulaProcessor()
             val xssfCell = cell as? XSSFCell ?: return null
 
             val cellValue = extractCellValue(xssfCell)
@@ -263,7 +104,7 @@ class ExcelToLuckysheetConverter {
             val hasBorder = hasBorderTop || hasBorderBottom || hasBorderLeft || hasBorderRight
 
             // Skip empty cells
-            if (cellValue == null && !hasFormula(xssfCell) && !hasBackground && !hasBorder) {
+            if (cellValue == null && !formulaProcessor.hasFormula(xssfCell) && !hasBackground && !hasBorder) {
                 return null
             }
 
@@ -286,7 +127,7 @@ class ExcelToLuckysheetConverter {
             val luckysheetValue = LuckysheetCellValue(
                 v = cellValue,
                 m = displayValue,
-                f = getFormulaSafely(xssfCell),
+                f = formulaProcessor.extractFormula(xssfCell),
                 ct = getLuckysheetCellType(xssfCell),
 
 
@@ -315,65 +156,6 @@ class ExcelToLuckysheetConverter {
             return null
         }
     }
-
-
-    private fun extractBorderStyleForSide(cellStyle: CellStyle, side: String): Int {
-        return try {
-            val borderStyle = when (side) {
-                "top" -> if (cellStyle.borderTop != BorderStyle.NONE) cellStyle.borderTop else null
-                "bottom" -> if (cellStyle.borderBottom != BorderStyle.NONE) cellStyle.borderBottom else null
-                "left" -> if (cellStyle.borderLeft != BorderStyle.NONE) cellStyle.borderLeft else null
-                "right" -> if (cellStyle.borderRight != BorderStyle.NONE) cellStyle.borderRight else null
-                else -> null
-            }
-
-            borderStyle?.let { poiBorderStyle ->
-                when (poiBorderStyle) {
-                    BorderStyle.NONE -> 0                          // None
-                    BorderStyle.THIN -> 1                          // Thin
-                    BorderStyle.HAIR -> 2                          // Hair
-                    BorderStyle.DOTTED -> 3                        // Dotted
-                    BorderStyle.DASHED -> 4                        // Dashed
-                    BorderStyle.DASH_DOT -> 5                      // DashDot
-                    BorderStyle.DASH_DOT_DOT -> 6                  // DashDotDot
-                    BorderStyle.DOUBLE -> 7                        // Double
-                    BorderStyle.MEDIUM -> 8                        // Medium
-                    BorderStyle.MEDIUM_DASHED -> 9                 // MediumDashed
-                    BorderStyle.MEDIUM_DASH_DOT -> 10              // MediumDashDot
-                    BorderStyle.MEDIUM_DASH_DOT_DOT -> 11          // MediumDashDotDot
-                    BorderStyle.SLANTED_DASH_DOT -> 12             // SlantedDashDot
-                    BorderStyle.THICK -> 13                        // Thick
-                    else -> {
-                        Log.d(TAG, "Unknown POI border style: $poiBorderStyle, using Thin (1)")
-                        1
-                    }
-                }
-            } ?: 0
-        } catch (e: Exception) {
-            Log.e(TAG, "Error extracting border style for $side: ${e.message}")
-            0
-        }
-    }
-    private fun hasFormula(cell: XSSFCell): Boolean {
-        return try {
-            cell.cellType == CellType.FORMULA
-        } catch (e: Exception) {
-            false
-        }
-    }
-
-    private fun getFormulaSafely(cell: XSSFCell): String? {
-        return try {
-            if (cell.cellType == CellType.FORMULA) {
-                "=" + cell.cellFormula
-            } else {
-                null
-            }
-        } catch (e: Exception) {
-            null
-        }
-    }
-
     private fun extractCellValue(cell: Cell): Any? {
         return when (cell.cellType) {
             CellType.STRING -> cell.stringCellValue
@@ -393,24 +175,8 @@ class ExcelToLuckysheetConverter {
             }
             CellType.BOOLEAN -> cell.booleanCellValue
             CellType.FORMULA -> {
-                try {
-                    when (cell.cachedFormulaResultType) {
-                        CellType.NUMERIC -> {
-                            val numValue = cell.numericCellValue
-                            if (numValue == numValue.toLong().toDouble()) {
-                                numValue.toLong()
-                            } else {
-                                numValue
-                            }
-                        }
-                        CellType.STRING -> cell.stringCellValue
-                        CellType.BOOLEAN -> cell.booleanCellValue
-                        else -> null
-                    }
-                } catch (e: Exception) {
-                    Log.w(TAG, "Could not evaluate formula in cell ${cell.rowIndex},${cell.columnIndex}")
-                    null
-                }
+                val formulaProcessor = FormulaProcessor()
+                formulaProcessor.extractFormulaCachedValue(cell)
             }
             CellType.BLANK -> null
             CellType.ERROR -> "#ERROR"
@@ -440,44 +206,10 @@ class ExcelToLuckysheetConverter {
 
             val dataFormatter = DataFormatter()
             val displayValue = dataFormatter.formatCellValue(cell)
-            displayValue.takeIf { it.isNotBlank() }?.let { cleanControlCharacters(it) }
+            displayValue.takeIf { it.isNotBlank() }?.let { ConversionUtils.cleanControlCharacters(it) }
         } catch (e: Exception) {
-            extractCellValue(cell)?.toString()?.let { cleanControlCharacters(it) }
+            extractCellValue(cell)?.toString()?.let { ConversionUtils.cleanControlCharacters(it) }
         }
-    }
-
-    private fun cleanControlCharacters(text: String): String {
-        return text
-            .replace("\u0000", "")      // NULL
-            .replace("\u0001", "")      // SOH
-            .replace("\u0002", "")      // STX
-            .replace("\u0003", "")      // ETX
-            .replace("\u0004", "")      // EOT
-            .replace("\u0005", "")      // ENQ
-            .replace("\u0006", "")      // ACK
-            .replace("\u0007", "")      // BEL
-            .replace("\u0008", "")      // BS
-            .replace("\u000B", "")      // VT
-            .replace("\u000C", "")      // FF
-            .replace("\u000E", "")      // SO
-            .replace("\u000F", "")      // SI
-            .replace("\u0010", "")      // DLE
-            .replace("\u0011", "")      // DC1
-            .replace("\u0012", "")      // DC2
-            .replace("\u0013", "")      // DC3
-            .replace("\u0014", "")      // DC4
-            .replace("\u0015", "")      // NAK
-            .replace("\u0016", "")      // SYN
-            .replace("\u0017", "")      // ETB
-            .replace("\u0018", "")      // CAN
-            .replace("\u0019", "")      // EM
-            .replace("\u001A", "")      // SUB
-            .replace("\u001B", "")      // ESC
-            .replace("\u001C", "")      // FS
-            .replace("\u001D", "")      // GS
-            .replace("\u001E", "")      // RS
-            .replace("\u001F", "")      // US
-            .replace("\u007F", "")      // DEL
     }
 
     private fun getLuckysheetCellType(cell: Cell): LuckysheetCellType {
@@ -528,15 +260,6 @@ class ExcelToLuckysheetConverter {
             else -> null
         }
     }
-    // Utility functions
-    private fun excelColumnWidthToPx(widthUnits: Int): Int {
-        val charCount = widthUnits / 256.0
-        return kotlin.math.floor(charCount * 7 + 5).toInt()
-    }
-
-    private fun excelRowHeightToPx(heightTwips: Short): Int {
-        return kotlin.math.round(heightTwips / 15.0).toInt()
-    }
 
     private fun getTextBreakValue(cellStyle: CellStyle): String? {
         return when {
@@ -544,36 +267,5 @@ class ExcelToLuckysheetConverter {
             cellStyle.shrinkToFit -> "0"      // clip (shrink to fit)
             else -> "0"                        // overflow (default)
         }
-    }
-    private fun createCalculationChain(sheet: XSSFSheet, sheetIndex: Int): List<LuckysheetCalcChain> {
-        val calcChain = mutableListOf<LuckysheetCalcChain>()
-
-        for (row in sheet) {
-            for (cell in row) {
-                if (cell.cellType == CellType.FORMULA) {
-                    try {
-                        val cachedValue = when (cell.cachedFormulaResultType) {
-                            CellType.NUMERIC -> cell.numericCellValue
-                            CellType.STRING -> cell.stringCellValue
-                            CellType.BOOLEAN -> cell.booleanCellValue
-                            else -> 0.0
-                        }
-
-                        calcChain.add(
-                            LuckysheetCalcChain(
-                                r = cell.rowIndex,
-                                c = cell.columnIndex,
-                                index = sheetIndex.toString(),
-                                func = listOf(true, cachedValue, "=" + cell.cellFormula)
-                            )
-                        )
-                    } catch (e: Exception) {
-                        Log.w(TAG, "Could not create calc chain for cell ${cell.rowIndex},${cell.columnIndex}")
-                    }
-                }
-            }
-        }
-
-        return calcChain
     }
 }

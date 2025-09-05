@@ -291,19 +291,4 @@ object FontColorUtils {
         val db = rgb1.third - rgb2.third
         return kotlin.math.sqrt((dr * dr + dg * dg + db * db).toDouble())
     }
-
-    /**
-     * Debug için renk bilgilerini loglar
-     */
-    fun debugFontColor(font: XSSFFont, label: String = "") {
-        Log.d(TAG, "=== FONT COLOR DEBUG: $label ===")
-        try {
-            Log.d(TAG, "Font.color index: ${font.color}")
-            Log.d(TAG, "Font name: ${font.fontName}")
-            Log.d(TAG, "Font size: ${font.fontHeightInPoints}")
-        } catch (e: Exception) {
-            Log.e(TAG, "Debug failed: ${e.message}")
-        }
-        Log.d(TAG, "================================")
-    }
 }
