@@ -408,7 +408,7 @@ fun NewFileBottomBar(
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(4.dp), // Küçük padding
+                            .padding(8.dp), // Küçük padding
                         verticalArrangement = Arrangement.Top,
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {

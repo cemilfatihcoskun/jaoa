@@ -76,6 +76,13 @@
     <string name="excelscreen_confirm">Yes</string>
     <string name="excelscreen_cancel">Cancel</string>
 
+    <string name="editorscreen_tooltipShare">Share document</string>
+    <string name="editorscreen_tooltipPrint">Print current document</string>
+    <string name="editorscreen_tooltipSaveas">Save document with a new name</string>
+    <string name="editorscreen_tooltipSave">Save current document</string>
+    <string name="editorscreen_tooltipRedo">Redo last undone action</string>
+    <string name="editorscreen_tooltipUndo">Undo last action</string>
+    <string name="editorscreen_tooltipBack">Go back to previous screen</string>
 
 
 </resources>

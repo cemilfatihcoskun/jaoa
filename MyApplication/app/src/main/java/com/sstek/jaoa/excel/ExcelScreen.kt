@@ -1,5 +1,6 @@
 package com.sstek.jaoa.excel
 
+import IconButtonWithTooltip
 import android.net.Uri
 import android.util.Log
 import android.webkit.WebView
@@ -71,50 +72,45 @@ fun ExcelScreen(
                 )
             },
             navigationIcon = {
-                IconButton(onClick = {
-
-                    if (viewModel.hasUnsavedChanges()) {
-                        showExitDialog = true
-                    } else {
-                        viewModel.clearSelectedFile()
-                        onBack()
+                IconButtonWithTooltip(
+                    icon = Icons.Default.ArrowBack,
+                    tooltipTextRes = R.string.editorscreen_tooltipBack,
+                    onClick = {
+                        if (viewModel.hasUnsavedChanges()) {
+                            showExitDialog = true
+                        } else {
+                            viewModel.clearSelectedFile()
+                            onBack()
+                        }
                     }
-                }) {
-                    Icon(Icons.Default.ArrowBack,  context.resources.getString(R.string.excelscreen_back))
-                }
+                )
             },
             actions = {
 
-                IconButton(
+                IconButtonWithTooltip(
+                    icon = Icons.Filled.Save,
+                    tooltipTextRes = R.string.editorscreen_tooltipSave,
                     onClick = {
                         if (selectedFileUri != null) {
                             val uriString = selectedFileUri.toString()
                             if (uriString.isNotBlank() && uriString != "new") {
-                                // Mevcut dosyayı kaydet
                                 viewModel.saveExcelFile(webView)
                             } else {
-                                // Yeni dosya - farklı kaydet dialog'u aç
                                 createDocumentLauncher.launch("${context.resources.getString(R.string.excelscreen_defaultDocumentName)}.xlsx")
                             }
                         } else {
-                            // URI yok - farklı kaydet dialog'u aç
                             createDocumentLauncher.launch("${context.resources.getString(R.string.excelscreen_defaultDocumentName)}.xlsx")
                         }
-                    },
-                    enabled = !isLoading
-                ) {
-                    Icon(Icons.Filled.Save,  context.resources.getString(R.string.excelscreen_save))
-                }
+                    }
+                )
 
-                // ✅ Save As butonu
-                IconButton(
+                IconButtonWithTooltip(
+                    icon = Icons.Filled.SaveAs,
+                    tooltipTextRes = R.string.editorscreen_tooltipSaveas,
                     onClick = {
-                        createDocumentLauncher.launch("${ context.resources.getString(R.string.excelscreen_defaultDocumentName)}.xlsx")
-                    },
-                    enabled = !isLoading
-                ) {
-                    Icon(Icons.Filled.SaveAs,  context.resources.getString(R.string.excelscreen_saveAs))
-                }
+                        createDocumentLauncher.launch("${context.resources.getString(R.string.excelscreen_defaultDocumentName)}.xlsx")
+                    }
+                )
             }
         )
 
