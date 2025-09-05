@@ -19,9 +19,7 @@ class LuckysheetToExcelConverter {
 
     fun convert(jsonData: String): XSSFWorkbook {
         Log.d(TAG, "Converting Luckysheet JSON to Excel workbook")
-
         val workbook = XSSFWorkbook()
-
         try {
             val type = object : TypeToken<List<LuckysheetSheet>>() {}.type
             val sheets: List<LuckysheetSheet> = gson.fromJson(jsonData, type)
@@ -38,7 +36,6 @@ class LuckysheetToExcelConverter {
             // Create a default sheet if parsing fails
             workbook.createSheet("Sheet1")
         }
-
         return workbook
     }
 
@@ -49,344 +46,16 @@ class LuckysheetToExcelConverter {
         sheetData.celldata?.forEach { cellInfo ->
             convertCell(sheet, cellInfo, styleCache)
         }
-        processBorders(sheet, sheetData.config?.borderInfo, workbook)
-        // ✅ Merge işlemi - hem object hem array formatını handle et
-        try {
-            val mergedRanges = parseMergeFromConfig(sheetData.config)
-            mergedRanges.forEach { mergeInfo ->
-                try {
-                    val cellRangeAddress = CellRangeAddress(
-                        mergeInfo.r,
-                        mergeInfo.r + mergeInfo.rs - 1,
-                        mergeInfo.c,
-                        mergeInfo.c + mergeInfo.cs - 1
-                    )
-                    sheet.addMergedRegion(cellRangeAddress)
-                } catch (e: Exception) {
-                    Log.w(TAG, "Could not add merged region: $mergeInfo", e)
-                }
-            }
-        } catch (e: Exception) {
-            Log.w(TAG, "Error processing merge data", e)
-        }
+        val borderProcessor = BorderProcessor()
+        borderProcessor.processBorders(sheet, sheetData.config?.borderInfo, workbook)
 
-        // Column widths
-        sheetData.config?.columnlen?.forEach { (colIndex, width) ->
-            try {
-                val col = colIndex.toIntOrNull()
-                if (col != null && width > 0) {
-                    val excelWidth = pxToExcelColumnWidthUnits(width)
-                    sheet.setColumnWidth(col, excelWidth)
-                    Log.d(TAG, "Column $col: ${width} px → ${excelWidth} units")
-                }
-            } catch (e: Exception) {
-                Log.w(TAG, "Could not set column width for column $colIndex: ${e.message}")
-            }
-        }
+        val mergeProcessor = MergeProcessor()
+        mergeProcessor.applyMergedRanges(sheet, sheetData.config?.merge)
 
-        // Row heights
-        sheetData.config?.rowlen?.forEach { (rowIndex, height) ->
-            try {
-                val rowNum = rowIndex.toIntOrNull()
-                if (rowNum != null && height > 0) {
-                    val row = sheet.getRow(rowNum) ?: sheet.createRow(rowNum)
-                    val excelHeight = pxToTwips(height)
-                    row.height = excelHeight
-                    Log.d(TAG, "Row $rowNum: ${height} px → ${excelHeight} twips")
-                }
-            } catch (e: Exception) {
-                Log.w(TAG, "Could not set row height for row $rowIndex: ${e.message}")
-            }
-        }
-    }
-    private fun processBorders(sheet: XSSFSheet, borderInfo: List<Any>?, workbook: XSSFWorkbook) {
-        if (borderInfo.isNullOrEmpty()) {
-            Log.d(TAG, "No border info to process")
-            return
-        }
-
-        Log.d(TAG, "Processing ${borderInfo.size} border entries...")
-
-        borderInfo.forEach { borderItem ->
-            try {
-                val borderJson = gson.toJsonTree(borderItem).asJsonObject
-
-                val borderType = borderJson.get("borderType")?.asString ?: "border-all"
-                val color = borderJson.get("color")?.asString ?: "#000000"
-                val style = borderJson.get("style")?.asInt ?: 1
-
-                Log.d(TAG, "Processing border: type=$borderType, color=$color, style=$style (int)")
-
-                val rangeArray = borderJson.get("range")?.asJsonArray
-                rangeArray?.forEach { rangeElement ->
-                    val rangeObj = rangeElement.asJsonObject
-                    val rowArray = rangeObj.get("row")?.asJsonArray
-                    val columnArray = rangeObj.get("column")?.asJsonArray
-                        ?: rangeObj.get("col")?.asJsonArray
-
-                    if (rowArray != null && columnArray != null) {
-                        val startRow = rowArray[0].asInt
-                        val endRow = rowArray[1].asInt
-                        val startCol = columnArray[0].asInt
-                        val endCol = columnArray[1].asInt
-
-                        Log.d(TAG, "Applying range border to ($startRow,$startCol) to ($endRow,$endCol)")
-
-                        when (borderType) {
-                            "border-all" -> {
-                                for (r in startRow..endRow) {
-                                    for (c in startCol..endCol) {
-                                        applyCellBorder(sheet, r, c, workbook, color, style)
-                                    }
-                                }
-                            }
-                            "border-none" -> {
-                                for (r in startRow..endRow) {
-                                    for (c in startCol..endCol) {
-                                        removeCellBorder(sheet, r, c, workbook)
-                                    }
-                                }
-                            }
-                            "border-top" -> {
-                                for (c in startCol..endCol) {
-                                    applySpecificBorderSide(sheet, startRow, c, workbook, color, style, "top")
-                                }
-                            }
-                            "border-bottom" -> {
-                                for (c in startCol..endCol) {
-                                    applySpecificBorderSide(sheet, endRow, c, workbook, color, style, "bottom")
-                                }
-                            }
-                            "border-left" -> {
-                                for (r in startRow..endRow) {
-                                    applySpecificBorderSide(sheet, r, startCol, workbook, color, style, "left")
-                                }
-                            }
-                            "border-right" -> {
-                                for (r in startRow..endRow) {
-                                    applySpecificBorderSide(sheet, r, endCol, workbook, color, style, "right")
-                                }
-                            }
-                            "border-outside" -> {
-                                applyOutsideBorder(sheet, startRow, endRow, startCol, endCol, workbook, color, style)
-                            }
-                            "border-inside" -> {
-                                applyInsideBorder(sheet, startRow, endRow, startCol, endCol, workbook, color, style)
-                            }
-                            "border-horizontal" -> {
-                                for (r in (startRow + 1)..endRow) {
-                                    for (c in startCol..endCol) {
-                                        applySpecificBorderSide(sheet, r, c, workbook, color, style, "top")
-                                    }
-                                }
-                            }
-                            "border-vertical" -> {
-                                for (c in (startCol + 1)..endCol) {
-                                    for (r in startRow..endRow) {
-                                        applySpecificBorderSide(sheet, r, c, workbook, color, style, "left")
-                                    }
-                                }
-                            }
-                            else -> {
-                                Log.w(TAG, "Unknown border type: $borderType")
-                            }
-                        }
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Error processing border item: ${e.message}")
-            }
-        }
+        val dimensionProcessor = DimensionProcessor()
+        dimensionProcessor.applyDimensions(sheet, sheetData.config?.columnlen, sheetData.config?.rowlen)
     }
 
-    private fun applySpecificBorderSide(sheet: XSSFSheet, row: Int, col: Int, workbook: XSSFWorkbook,
-                                        color: String, style: Int, borderSide: String) {
-        val excelRow = sheet.getRow(row) ?: sheet.createRow(row)
-        val cell = excelRow.getCell(col) ?: excelRow.createCell(col)
-
-        val cellStyle = workbook.createCellStyle()
-        cellStyle.cloneStyleFrom(cell.cellStyle)
-
-        val borderStyle = when (style) {
-            0 -> BorderStyle.NONE
-            1 -> BorderStyle.THIN
-            2 -> BorderStyle.HAIR
-            3 -> BorderStyle.DOTTED
-            4 -> BorderStyle.DASHED
-            5 -> BorderStyle.DASH_DOT
-            6 -> BorderStyle.DASH_DOT_DOT
-            7 -> BorderStyle.DOUBLE
-            8 -> BorderStyle.MEDIUM
-            9 -> BorderStyle.MEDIUM_DASHED
-            10 -> BorderStyle.MEDIUM_DASH_DOT
-            11 -> BorderStyle.MEDIUM_DASH_DOT_DOT
-            12 -> BorderStyle.SLANTED_DASH_DOT
-            13 -> BorderStyle.THICK
-            else -> {
-                Log.w(TAG, "Unknown Luckysheet border style: $style for $borderSide, using THIN")
-                BorderStyle.THIN
-            }
-        }
-
-        Log.d(TAG, "✅ Applying $borderSide border - Luckysheet style $style → POI $borderStyle")
-
-        when (borderSide) {
-            "top" -> cellStyle.borderTop = borderStyle
-            "bottom" -> cellStyle.borderBottom = borderStyle
-            "left" -> cellStyle.borderLeft = borderStyle
-            "right" -> cellStyle.borderRight = borderStyle
-        }
-
-        // ✅ Border color using utils
-        BackgroundAndBorderColorUtils.applyBorderColor(cellStyle, color, borderSide)
-
-        cell.cellStyle = cellStyle
-    }
-
-    private fun removeCellBorder(sheet: XSSFSheet, row: Int, col: Int, workbook: XSSFWorkbook) {
-        val excelRow = sheet.getRow(row) ?: sheet.createRow(row)
-        val cell = excelRow.getCell(col) ?: excelRow.createCell(col)
-
-        val cellStyle = workbook.createCellStyle()
-        cellStyle.cloneStyleFrom(cell.cellStyle)
-
-
-        cellStyle.borderLeft = BorderStyle.NONE
-        cellStyle.borderRight = BorderStyle.NONE
-        cellStyle.borderTop = BorderStyle.NONE
-        cellStyle.borderBottom = BorderStyle.NONE
-
-        cell.cellStyle = cellStyle
-    }
-
-
-    private fun applyOutsideBorder(sheet: XSSFSheet, startRow: Int, endRow: Int, startCol: Int, endCol: Int,
-                                   workbook: XSSFWorkbook, color: String, style: Int) {
-        // Üst border
-        for (c in startCol..endCol) {
-            applySpecificBorderSide(sheet, startRow, c, workbook, color, style, "top")
-        }
-        // Alt border
-        for (c in startCol..endCol) {
-            applySpecificBorderSide(sheet, endRow, c, workbook, color, style, "bottom")
-        }
-        // Sol border
-        for (r in startRow..endRow) {
-            applySpecificBorderSide(sheet, r, startCol, workbook, color, style, "left")
-        }
-        // Sağ border
-        for (r in startRow..endRow) {
-            applySpecificBorderSide(sheet, r, endCol, workbook, color, style, "right")
-        }
-    }
-
-    private fun applyInsideBorder(sheet: XSSFSheet, startRow: Int, endRow: Int, startCol: Int, endCol: Int,
-                                  workbook: XSSFWorkbook, color: String, style: Int) {
-
-        for (r in (startRow + 1)..endRow) {
-            for (c in startCol..endCol) {
-                applySpecificBorderSide(sheet, r, c, workbook, color, style, "top")
-            }
-        }
-
-        for (c in (startCol + 1)..endCol) {
-            for (r in startRow..endRow) {
-                applySpecificBorderSide(sheet, r, c, workbook, color, style, "left")
-            }
-        }
-    }
-
-    private fun applyCellBorder(sheet: XSSFSheet, row: Int, col: Int, workbook: XSSFWorkbook, color: String, style: Int) {
-        val excelRow = sheet.getRow(row) ?: sheet.createRow(row)
-        val cell = excelRow.getCell(col) ?: excelRow.createCell(col)
-
-        val cellStyle = workbook.createCellStyle()
-        cellStyle.cloneStyleFrom(cell.cellStyle)
-
-        val borderStyle = when (style) {
-            0 -> BorderStyle.NONE                    // None
-            1 -> BorderStyle.THIN                    // Thin (default)
-            2 -> BorderStyle.HAIR                    // Hair (very thin)
-            3 -> BorderStyle.DOTTED                  // Dotted
-            4 -> BorderStyle.DASHED                  // Dashed
-            5 -> BorderStyle.DASH_DOT                // DashDot
-            6 -> BorderStyle.DASH_DOT_DOT           // DashDotDot
-            7 -> BorderStyle.DOUBLE                  // Double
-            8 -> BorderStyle.MEDIUM                  // Medium
-            9 -> BorderStyle.MEDIUM_DASHED          // MediumDashed
-            10 -> BorderStyle.MEDIUM_DASH_DOT       // MediumDashDot
-            11 -> BorderStyle.MEDIUM_DASH_DOT_DOT   // MediumDashDotDot
-            12 -> BorderStyle.SLANTED_DASH_DOT      // SlantedDashDot
-            13 -> BorderStyle.THICK                 // Thick
-            else -> {
-                Log.w(TAG, "Unknown Luckysheet border style: $style, using THIN as fallback")
-                BorderStyle.THIN
-            }
-        }
-
-        Log.d(TAG, "✅ Luckysheet style $style → POI $borderStyle for cell ($row,$col)")
-
-        if (borderStyle == BorderStyle.NONE) {
-            cellStyle.borderLeft = BorderStyle.NONE
-            cellStyle.borderRight = BorderStyle.NONE
-            cellStyle.borderTop = BorderStyle.NONE
-            cellStyle.borderBottom = BorderStyle.NONE
-        } else {
-            cellStyle.borderLeft = borderStyle
-            cellStyle.borderRight = borderStyle
-            cellStyle.borderTop = borderStyle
-            cellStyle.borderBottom = borderStyle
-
-            // ✅ Border color using utils
-            BackgroundAndBorderColorUtils.applyBorderColor(cellStyle, color, "all")
-        }
-
-        cell.cellStyle = cellStyle
-    }
-
-    private fun parseMergeFromConfig(config: LuckysheetConfig?): List<LuckysheetMerge> {
-        if (config?.merge == null) return emptyList()
-
-        val mergeList = mutableListOf<LuckysheetMerge>()
-
-        try {
-            val mergeJson = gson.toJsonTree(config.merge)
-
-            when {
-                mergeJson.isJsonArray -> {
-                    // Array format: [{"r":0,"c":0,"rs":2,"cs":2}]
-                    mergeJson.asJsonArray.forEach { element ->
-                        val obj = element.asJsonObject
-                        mergeList.add(LuckysheetMerge(
-                            r = obj.get("r")?.asInt ?: 0,
-                            c = obj.get("c")?.asInt ?: 0,
-                            rs = obj.get("rs")?.asInt ?: 1,
-                            cs = obj.get("cs")?.asInt ?: 1
-                        ))
-                    }
-                }
-                mergeJson.isJsonObject -> {
-                    // Object format: {"0_0":{"r":0,"c":0,"rs":2,"cs":2}}
-                    mergeJson.asJsonObject.entrySet().forEach { entry ->
-                        val obj = entry.value.asJsonObject
-                        mergeList.add(LuckysheetMerge(
-                            r = obj.get("r")?.asInt ?: 0,
-                            c = obj.get("c")?.asInt ?: 0,
-                            rs = obj.get("rs")?.asInt ?: 1,
-                            cs = obj.get("cs")?.asInt ?: 1
-                        ))
-                    }
-                }
-            }
-
-            Log.d(TAG, "Parsed ${mergeList.size} merge ranges from ${if (mergeJson.isJsonArray) "array" else "object"} format")
-
-        } catch (e: Exception) {
-            Log.w(TAG, "Could not parse merge data: ${e.message}")
-        }
-
-        return mergeList
-    }
 
     private fun convertCell(
         sheet: XSSFSheet,
@@ -397,16 +66,11 @@ class LuckysheetToExcelConverter {
         try {
             val row = sheet.getRow(cellInfo.r) ?: sheet.createRow(cellInfo.r)
             val cell = row.createCell(cellInfo.c)
-
-            // Set cell value
             setCellValue(cell, cellInfo.v)
-
-            // Set cell style
             val style = createCellStyle(sheet.workbook, cellInfo.v, styleCache)
             if (style != null) {
                 cell.cellStyle = style
             }
-
         } catch (e: Exception) {
             Log.e(TAG, "Error converting cell at ${cellInfo.r},${cellInfo.c}", e)
         }
@@ -415,30 +79,12 @@ class LuckysheetToExcelConverter {
     private fun setCellValue(cell: XSSFCell, cellValue: LuckysheetCellValue) {
 
         if (!cellValue.f.isNullOrBlank()) {
+            val formulaProcessor = FormulaProcessor()
             try {
-                val formula = cellValue.f.removePrefix("=")
-                cell.cellFormula = formula
-
-                when (val value = cellValue.v) {
-                    is Number -> {
-                        cell.setCellValue(value.toDouble())
-                        Log.d(TAG, "Set formula: $formula with cached numeric value: $value")
-                    }
-                    is String -> {
-                        cell.setCellValue(value)
-                        Log.d(TAG, "Set formula: $formula with cached string value: $value")
-                    }
-                    is Boolean -> {
-                        cell.setCellValue(value)
-                        Log.d(TAG, "Set formula: $formula with cached boolean value: $value")
-                    }
-                    else -> {
-                        Log.d(TAG, "Set formula: $formula without cached value")
-                    }
-                }
+                formulaProcessor.setFormulaToCell(cell, cellValue.f, cellValue.v)
                 return
             } catch (e: Exception) {
-                Log.w(TAG, "Could not set formula: ${cellValue.f}", e)
+                Log.w(TAG, "Formula setting failed, falling back to regular value")
             }
         }
 
@@ -446,7 +92,7 @@ class LuckysheetToExcelConverter {
             is String -> {
                 if (value.isNotBlank()) {
 
-                    if (isDateString(value)) {
+                    if (ConversionUtils.isDateString(value)) {
                         try {
                             val date = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(value)
                             date?.let { validDate ->
@@ -467,7 +113,6 @@ class LuckysheetToExcelConverter {
                 cell.setCellValue(value)
             }
             else -> {
-                // For null or other types, use the display value
                 val displayValue = cellValue.m
                 if (!displayValue.isNullOrBlank()) {
                     cell.setCellValue(displayValue)
@@ -488,11 +133,8 @@ class LuckysheetToExcelConverter {
             Log.d(TAG, "!hasStyleProperties(cellValue) null")
             return null
         }
-
         val style = workbook.createCellStyle()
         val font = workbook.createFont()
-
-
         cellValue.ff?.let { fontFamily ->
             if (fontFamily.isNotBlank()) {
                 font.fontName = fontFamily
@@ -523,7 +165,7 @@ class LuckysheetToExcelConverter {
         // ✅ Background color using utils
         BackgroundAndBorderColorUtils.applyBackgroundColor(style, cellValue.bg)
 
-        // ✅ Alignment (same as before)
+        // ✅ Alignment
         cellValue.ht?.let { horizontalAlign ->
             style.alignment = when (horizontalAlign) {
                 LuckysheetConstants.ALIGN_LEFT -> HorizontalAlignment.LEFT
@@ -607,23 +249,6 @@ class LuckysheetToExcelConverter {
                 cellValue.tb != null
     }
 
-    private fun isDateString(value: String): Boolean {
-        return try {
-            SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).parse(value) != null
-        } catch (e: Exception) {
-            false
-        }
-    }
-    private fun pxToExcelColumnWidthUnits(pixels: Double): Int {
-        val charCount = (pixels - 5) / 7.0
-        val units = kotlin.math.round(charCount * 256).toInt()
-        return units.coerceAtMost(65280).coerceAtLeast(0) // Max 255 char = 65280 units
-    }
-
-    private fun pxToTwips(pixels: Double): Short {
-        val twips = kotlin.math.round(pixels * 15.0).toInt()
-        return twips.coerceIn(0, Short.MAX_VALUE.toInt()).toShort()
-    }
     private fun applyTextBreak(cellStyle: XSSFCellStyle, tbValue: String?) {
         when (tbValue) {
             "2" -> {
