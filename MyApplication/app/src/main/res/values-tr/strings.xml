@@ -36,6 +36,7 @@
     <string name="wordscreen_print">Yazdır</string>
     <string name="wordscreen_share">Paylaş</string>
 
+
     <string name="permissionController_permissionDeniedMessage">İzin reddedildi.</string>
     <string name="permissionController_permissionNeededTitle">İzin gerekiyor</string>
     <string name="permissionController_permissionNeededMessage">Cihazınızdaki dokümanları görüntüleyebilmemiz için tüm dosyalara erişim izni vermeniz gerekmektedir. Lütfen izin veriniz.</string>
@@ -75,6 +76,15 @@
     <string name="excelscreen_unsavedChangesContent">Kaydedilmemiş değişiklikler var. Çıkmak istediğinize emin misiniz?</string>
     <string name="excelscreen_confirm">Evet</string>
     <string name="excelscreen_cancel">İptal</string>
+
+    <string name="editorscreen_tooltipShare">Dökümanı başkalarıyla paylaş</string>
+    <string name="editorscreen_tooltipPrint">Dökümanı yazdır</string>
+    <string name="editorscreen_tooltipSaveas">Dökümanı farklı kaydet</string>
+    <string name="editorscreen_tooltipSave">Dökümanı kaydet</string>
+    <string name="editorscreen_tooltipRedo">Son geri alınan işlemi tekrar yap</string>
+    <string name="editorscreen_tooltipUndo">Son işlemi geri al</string>
+    <string name="editorscreen_tooltipBack">Önceki ekrana dön</string>
+
 
 
 </resources>

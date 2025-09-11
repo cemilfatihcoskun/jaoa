@@ -1,15 +1,18 @@
 package com.sstek.jaoa.word
 
+import IconButtonWithTooltip
 import android.app.Activity
 import android.net.Uri
 import android.webkit.WebView
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Print
@@ -22,6 +25,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -131,29 +135,33 @@ fun QuillEditorScreen(
                     .horizontalScroll(scrollState),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                IconButton(onClick = {
+                IconButtonWithTooltip(
+                    icon = Icons.Default.ArrowBack,
+                    tooltipTextRes = R.string.editorscreen_tooltipBack
+                ) {
                     viewModel.clearSelectedFile()
                     onBack()
-                }) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = context.resources.getString(R.string.wordscreen_back))
                 }
 
                 Spacer(modifier = Modifier.width(8.dp))
 
-                IconButton(onClick = {
+                IconButtonWithTooltip(
+                    icon = Icons.Default.Undo,
+                    tooltipTextRes = R.string.editorscreen_tooltipUndo
+                ) {
                     webView?.evaluateJavascript("quill.history.undo();", null)
-                }) {
-                    Icon(Icons.Default.Undo, contentDescription = context.resources.getString(R.string.wordscreen_undo))
                 }
 
-                IconButton(onClick = {
+                IconButtonWithTooltip(
+                    icon = Icons.Default.Redo,
+                    tooltipTextRes = R.string.editorscreen_tooltipRedo
+                ) {
                     webView?.evaluateJavascript("quill.history.redo();", null)
-                }) {
-                    Icon(Icons.Default.Redo, contentDescription = context.resources.getString(R.string.wordscreen_redo))
                 }
 
                 Spacer(modifier = Modifier.width(8.dp))
 
+                // Page dropdown kısmı aynı kalabilir
                 Box {
                     Button(onClick = { pageDropdownExpanded = true }) {
                         Text("$currentPage/$totalPages")
@@ -178,8 +186,10 @@ fun QuillEditorScreen(
 
                 Spacer(modifier = Modifier.weight(1f))
 
-                IconButton(onClick = {
-
+                IconButtonWithTooltip(
+                    icon = Icons.Filled.Save,
+                    tooltipTextRes = R.string.editorscreen_tooltipSave
+                ) {
                     if (viewModel.selectedFileUri.value != null) {
                         webView?.evaluateJavascript("window.getHtmlContent();") { html ->
                             val jsonWrapped = "{ \"data\": $html }"
@@ -190,39 +200,33 @@ fun QuillEditorScreen(
                     } else {
                         createDocumentLauncher.launch("${context.resources.getString(R.string.wordscreen_defaultDocumentName)}.docx")
                     }
-
-                }) {
-                    Icon(Icons.Filled.Save, contentDescription = context.resources.getString(R.string.wordscreen_save))
                 }
 
-                IconButton(onClick = {
+                IconButtonWithTooltip(
+                    icon = Icons.Filled.SaveAs,
+                    tooltipTextRes = R.string.editorscreen_tooltipSaveas
+                ) {
                     createDocumentLauncher.launch("${context.resources.getString(R.string.wordscreen_defaultDocumentName)}.docx")
-                }) {
-                    Icon(Icons.Filled.SaveAs, contentDescription = context.resources.getString(R.string.wordscreen_saveas))
                 }
 
-                IconButton(onClick = {
+                IconButtonWithTooltip(
+                    icon = Icons.Default.Print,
+                    tooltipTextRes = R.string.editorscreen_tooltipPrint
+                ) {
                     val uri = viewModel.selectedFileUri.value ?: filePath
                     if (uri != null) {
                         webView?.let {
                             htmlPrint(it, context)
-                        } ?: {
-                            Toast.makeText(context, context.resources.getString(R.string.wordscreen_documentNotReadyMessage), Toast.LENGTH_SHORT)
-                                .show()
-                        }
-
+                        } ?: Toast.makeText(context, context.resources.getString(R.string.wordscreen_documentNotReadyMessage), Toast.LENGTH_SHORT).show()
                     } else {
-                        android.widget.Toast.makeText(
-                            context,
-                            context.resources.getString(R.string.wordscreen_documentNotSavedMessage),
-                            android.widget.Toast.LENGTH_SHORT
-                        ).show()
+                        Toast.makeText(context, context.resources.getString(R.string.wordscreen_documentNotSavedMessage), Toast.LENGTH_SHORT).show()
                     }
-                }) {
-                    Icon(Icons.Default.Print, contentDescription = context.resources.getString(R.string.wordscreen_print))
                 }
 
-                IconButton(onClick = {
+                IconButtonWithTooltip(
+                    icon = Icons.Default.Share,
+                    tooltipTextRes = R.string.editorscreen_tooltipShare
+                ) {
                     val uri = viewModel.selectedFileUri.value ?: filePath
                     if (uri != null) {
                         shareDocument(
@@ -232,18 +236,11 @@ fun QuillEditorScreen(
                             getFileName(context, uri)
                         )
                     } else {
-                        android.widget.Toast.makeText(
-                            context,
-                            context.resources.getString(R.string.wordscreen_documentNotSavedMessage),
-                            android.widget.Toast.LENGTH_SHORT
-                        ).show()
+                        Toast.makeText(context, context.resources.getString(R.string.wordscreen_documentNotSavedMessage), Toast.LENGTH_SHORT).show()
                     }
-                }) {
-                    Icon(Icons.Default.Share, contentDescription = context.resources.getString(R.string.wordscreen_share))
                 }
-
-
             }
+
 
             if (isLoading) {
                 Box(
@@ -314,3 +311,4 @@ fun QuillEditorScreen(
         }
     }
 }
+
