@@ -8,7 +8,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
     <title>Luckysheet</title>
 
-    <!-- ✅ RESPONSIVE CSS -->
     <style>
         html, body {
             margin: 0;
@@ -27,23 +26,20 @@
             top: 0;
             left: 0;
         }
-
-        /* WebView responsive fixes */
         .luckysheet-wa-editor {
             max-width: 95% !important;
         }
-        .luckysheet-dropdown {
-            max-width: 90% !important;
+        .luckysheet-modal-dialog,
+        .luckysheet-cols-menu {
+            max-width: 95% !important;
+            left: 50% !important;
+            transform: translateX(-50%) !important; /* Ortala */
+            box-sizing: border-box;
+            overflow-x: auto; /* Taşarsa kaydır */
         }
-.luckysheet-modal-dialog,
-.luckysheet-cols-menu {
-    max-width: 95% !important;
-    left: 50% !important;
-    transform: translateX(-50%) !important; /* Ortala */
-    box-sizing: border-box;
-    overflow-x: auto; /* Taşarsa kaydır */
+#luckysheet-rightclick-sheet-menu {
+    position: fixed !important;
 }
-
     </style>
 
     <!-- ✅ ORİJİNAL CSS DOSYALARI -->
@@ -78,7 +74,6 @@
             window.jQuery = window.$;
         }
     </script>
-
     <!-- ✅ CDN MOCK'LARI - Hataları önlemek için -->
     <script>
         console.log('🚀 Luckysheet + CDN Mock başlatılıyor...');
@@ -142,12 +137,9 @@
             version: '1.0.0-mock'
         };
     </script>
-
     <script src="./plugins/js/plugin.js"></script>
     <script src="./luckysheet.umd.js"></script>
-
 </head>
-
 <body>
 <div id="luckysheet"></div>
 
@@ -171,9 +163,6 @@
         const container = document.getElementById('luckysheet');
         const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
         const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
-
-        console.log('📱 Setting Luckysheet size:', viewportWidth, 'x', viewportHeight);
-
         container.style.width = viewportWidth + 'px';
         container.style.height = viewportHeight + 'px';
 
@@ -181,7 +170,7 @@
         if (window.luckysheet && typeof luckysheet.resize === 'function') {
             setTimeout(() => {
                 luckysheet.resize();
-                console.log('✅ Luckysheet resized to:', viewportWidth, 'x', viewportHeight);
+
             }, 100);
         }
     }
@@ -214,6 +203,14 @@
                 forceCalculation:true,
                 plugins: [],
                 showinfobar: false,
+                allowEdit: true,
+
+  showSheetBarConfig: {
+    add: true,
+    menu: true,
+    sheet: true
+  },
+  showConfigWindowResize: true,
                 fontList:[
                     {
                     "fontName":"HanaleiFill",
@@ -271,9 +268,62 @@
                     cellUpdateBefore:function(r,c,value,isRefresh){
                         // console.info('cellUpdateBefore',r,c,value,isRefresh)
                     },
-                    cellUpdated:function(r,c,oldValue, newValue, isRefresh){
-                        // console.info('cellUpdated',r,c,oldValue, newValue, isRefresh)
-                    },
+          cellUpdated: function(r, c, oldValue, newValue, isRefresh){
+            console.info('cellUpdated', r, c, oldValue, newValue, isRefresh)
+            if (newValue && typeof newValue === 'object') {
+            const v = newValue.v;
+            const f = newValue.f;
+
+            // Eğer formül var ama değer formül değilse, formülü kaldır
+            if (f && f !== "") {
+            let shouldRemoveFormula = false;
+
+            // Durum 1: Değer boş
+            if (!v || v === "" || v === null || v === undefined) {
+                shouldRemoveFormula = true;
+                console.log('Empty value detected, removing formula...');
+            }
+            // Durum 2: Değer string ama formül formatında değil (= ile başlamıyor)
+            else if (typeof v === 'string' && !v.startsWith('=')) {
+                shouldRemoveFormula = true;
+                console.log('Non-formula text detected, removing formula...');
+            }
+            // Durum 3: Değer number ama kullanıcı direkt sayı girmiş (formül sonucu değil)
+            else if (typeof v === 'number' && typeof oldValue === 'object' && oldValue?.f) {
+                // Eğer eski değerde formül vardı ama yeni değer sadece sayıysa
+                shouldRemoveFormula = true;
+                console.log('Direct number input detected, removing formula...');
+            }
+
+            if (shouldRemoveFormula) {
+                try {
+                    const sheets = luckysheet.getluckysheetfile();
+                    const currentSheet = sheets[luckysheet.getSheet().index];
+
+                    if (currentSheet && currentSheet.data) {
+                        if (currentSheet.data[r] && currentSheet.data[r][c]) {
+                            if (currentSheet.data[r][c].f) {
+                                delete currentSheet.data[r][c].f;
+                                console.log('Formula deleted from data matrix');
+                                luckysheet.refresh();
+                            }
+                        }
+                    }
+
+                    if (currentSheet && currentSheet.celldata && currentSheet.celldata.length > 0) {
+                        const cellIndex = currentSheet.celldata.findIndex(cell => cell.r === r && cell.c === c);
+                        if (cellIndex >= 0 && currentSheet.celldata[cellIndex].v && currentSheet.celldata[cellIndex].v.f) {
+                            delete currentSheet.celldata[cellIndex].v.f;
+                            console.log('Formula deleted from celldata');
+                        }
+                    }
+                } catch (e) {
+                    console.error('Error:', e);
+                }
+            }
+        }
+    }
+},
                     sheetActivate:function(index, isPivotInitial, isNewSheet){
                         // console.info(index, isPivotInitial, isNewSheet)
                     },
@@ -336,14 +386,72 @@
                                         showinfobar: false,
                                         plugins: [],
                                         hook: {
-                                            workbookCreateAfter: function(newJson) {
-                                                console.log('✅ Data loaded successfully');
-                                                setTimeout(() => {
-                                                    setLuckysheetSize(); // ✅ Resize after load
-                                                }, 500);
-                                            }
-                                        }
-                                    };
+                cellUpdated: function(r, c, oldValue, newValue, isRefresh) {
+    console.info('cellUpdated', r, c, oldValue, newValue, isRefresh)
+
+    if (newValue && typeof newValue === 'object') {
+        const v = newValue.v;
+        const f = newValue.f;
+
+        // Eğer formül var ama değer formül değilse, formülü kaldır
+        if (f && f !== "") {
+            let shouldRemoveFormula = false;
+
+            // Durum 1: Değer boş
+            if (!v || v === "" || v === null || v === undefined) {
+                shouldRemoveFormula = true;
+                console.log('Empty value detected, removing formula...');
+            }
+            // Durum 2: Değer string ama formül formatında değil (= ile başlamıyor)
+            else if (typeof v === 'string' && !v.startsWith('=')) {
+                shouldRemoveFormula = true;
+                console.log('Non-formula text detected, removing formula...');
+            }
+            // Durum 3: Değer number ama kullanıcı direkt sayı girmiş (formül sonucu değil)
+            else if (typeof v === 'number' && typeof oldValue === 'object' && oldValue?.f) {
+                // Eğer eski değerde formül vardı ama yeni değer sadece sayıysa
+                shouldRemoveFormula = true;
+                console.log('Direct number input detected, removing formula...');
+            }
+
+            if (shouldRemoveFormula) {
+                try {
+                    const sheets = luckysheet.getluckysheetfile();
+                    const currentSheet = sheets[luckysheet.getSheet().index];
+
+                    if (currentSheet && currentSheet.data) {
+                        if (currentSheet.data[r] && currentSheet.data[r][c]) {
+                            if (currentSheet.data[r][c].f) {
+                                delete currentSheet.data[r][c].f;
+                                console.log('Formula deleted from data matrix');
+                                luckysheet.refresh();
+                            }
+                        }
+                    }
+
+                    if (currentSheet && currentSheet.celldata && currentSheet.celldata.length > 0) {
+                        const cellIndex = currentSheet.celldata.findIndex(cell => cell.r === r && cell.c === c);
+                        if (cellIndex >= 0 && currentSheet.celldata[cellIndex].v && currentSheet.celldata[cellIndex].v.f) {
+                            delete currentSheet.celldata[cellIndex].v.f;
+                            console.log('Formula deleted from celldata');
+                        }
+                    }
+                } catch (e) {
+                    console.error('Error:', e);
+                }
+            }
+        }
+    }
+},
+                workbookCreateAfter: function(newJson) {
+                    console.log('✅ Data loaded successfully');
+                    setTimeout(() => {
+                        setLuckysheetSize();
+                    }, 500);
+
+                }
+            }
+        };
 
                                     luckysheet.create(newOptions);
                                     return true;
@@ -403,7 +511,7 @@
                     "hide": 0,
                     "zoomRatio": 1.0
                 }]
-                //[sheetCell,sheetFormula,sheetConditionFormat,sheetSparkline,sheetTable,sheetComment,sheetPivotTableData,sheetPivotTable,sheetChart,sheetPicture,sheetDataVerification]
+                //data:[sheetCell,sheetFormula,sheetConditionFormat,sheetSparkline,sheetTable,sheetComment,sheetPivotTableData,sheetPivotTable,sheetChart,sheetPicture,sheetDataVerification]
             }
         }
 

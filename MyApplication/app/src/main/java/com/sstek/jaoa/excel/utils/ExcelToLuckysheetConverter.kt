@@ -262,10 +262,24 @@ class ExcelToLuckysheetConverter {
     }
 
     private fun getTextBreakValue(cellStyle: CellStyle): String? {
-        return when {
-            cellStyle.wrapText -> "2"           // wrap
-            cellStyle.shrinkToFit -> "0"      // clip (shrink to fit)
-            else -> "0"                        // overflow (default)
+        Log.d(TAG, "getTextBreakValue: wrapText=${cellStyle.wrapText}, shrinkToFit=${cellStyle.shrinkToFit}")
+
+        val result = when {
+            cellStyle.wrapText -> {
+                Log.d(TAG, "Returning wrap (2)")
+                "2"
+            }
+            cellStyle.shrinkToFit -> {
+                Log.d(TAG, "Returning clip (0)")
+                "0"
+            }
+            else -> {
+                Log.d(TAG, "Returning overflow (1)")
+                "1"
+            }
         }
+
+        Log.d(TAG, "Final result: $result")
+        return result
     }
 }

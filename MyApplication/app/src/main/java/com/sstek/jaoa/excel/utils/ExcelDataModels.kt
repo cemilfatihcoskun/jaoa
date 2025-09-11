@@ -7,7 +7,7 @@ data class LuckysheetWorkbook(
 
 data class LuckysheetSheet(
     val name: String,
-    val index: Int,
+    val index: Any,
     val celldata: List<LuckysheetCell>? = null,
     val row: Int = 100,
     val column: Int = 26,
@@ -18,7 +18,7 @@ data class LuckysheetSheet(
     val luckysheet_select_save: List<LuckysheetSelection>? = null,
     val calcChain: List<LuckysheetCalcChain>? = null,
     val status: Int = 1,
-    val order: Int = index,
+    val order: Int = 0,
     val hide: Int = 0,
     val zoomRatio: Double = 1.0
 )
@@ -41,7 +41,7 @@ data class LuckysheetCellValue(
     val it: Int? = null,            // italic (0/1)
     val cl: Int? = null,            // underline (0/1)
     val un: Int? = null,            // strikethrough (0/1)
-    val vt: Int? = null,            // vertical align (0=top, 1=middle, 2=bottom)
+    val vt: Int? = null,            // vertical align (1=top, 0=middle, 2=bottom)
     val ht: Int? = null,            // horizontal align (0=left, 1=center, 2=right)
     val tb: String? = null,         // text break
     val f: String? = null,          // formula
