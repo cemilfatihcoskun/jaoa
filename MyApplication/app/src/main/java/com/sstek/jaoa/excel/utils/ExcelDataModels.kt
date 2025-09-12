@@ -16,7 +16,7 @@ data class LuckysheetSheet(
     val scrollTop: Double = 0.0,
     val selection: List<LuckysheetSelection>? = null,
     val luckysheet_select_save: List<LuckysheetSelection>? = null,
-    val calcChain: List<LuckysheetCalcChain>? = null,
+    val calcChain: List<LuckysheetCalcChain>? = null,//fonksiyonların bağımlılıklarını tutmak için (bağımlı hücreleri değiştirdiğinde sonucun değişmesi için)
     val status: Int = 1,
     val order: Int = 0,
     val hide: Int = 0,
@@ -42,7 +42,7 @@ data class LuckysheetCellValue(
     val cl: Int? = null,            // underline (0/1)
     val un: Int? = null,            // strikethrough (0/1)
     val vt: Int? = null,            // vertical align (1=top, 0=middle, 2=bottom)
-    val ht: Int? = null,            // horizontal align (0=left, 1=center, 2=right)
+    val ht: Int? = null,            // horizontal align (1=left, 0=center, 2=right)
     val tb: String? = null,         // text break
     val f: String? = null,          // formula
     val spl: Any? = null,           // split info
