@@ -290,7 +290,8 @@ fun QuillEditorScreen(
                         }, "AndroidInterface")
 
                         //addJavascriptInterface(AndroidWebInterface(this, htmlContent ?: ""), "AndroidInterface")
-                        loadUrl("file:///android_asset/quill_editor.html")
+                        //loadUrl("file:///android_asset/quill_editor.html")
+                        loadUrl("file:///android_asset/index.html")
                         webView = this
                     }
                 },

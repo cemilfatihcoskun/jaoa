@@ -64,6 +64,7 @@
     <string name="wordViewModel_firstChooseFileMessage">Lütfen dosya seçiniz.</string>
     <string name="wordViewModel_fileSavedAsSuccessfullyMessage">Doküman başarıyla farklı kaydedildi.</string>
     <string name="wordViewModel_fileSavedAsErrorMessage">Doküman farklı kaydedilemedi.</string>
+    <string name="wordViewModel_fileLoadErrorMessage">Doküman yüklenemedi.</string>
 
     <string name="excelscreen_excelEditor">Excel Düzenleyici</string>
     <string name="excelscreen_newExcelDocument">Yeni Excel Dosyası</string>
@@ -84,7 +85,24 @@
     <string name="editorscreen_tooltipRedo">Son geri alınan işlemi tekrar yap</string>
     <string name="editorscreen_tooltipUndo">Son işlemi geri al</string>
     <string name="editorscreen_tooltipBack">Önceki ekrana dön</string>
-
+    <string name="editorscreen_tooltipBold">Kalın</string>
+    <string name="editorscreen_tooltipItalic">İtalik</string>
+    <string name="editorscreen_tooltipUnderline">Altı çizili</string>
+    <string name="editorscreen_tooltipStrike">Üstü çizili</string>
+    <string name="editorscreen_tooltipAlignLeft">Sola yasla</string>
+    <string name="editorscreen_tooltipAlignCenter">Ortaya yasla</string>
+    <string name="editorscreen_tooltipAlignRight">Sağa yasla</string>
+    <string name="editorscreen_tooltipAlignJustify">Doldurmalı yasla</string>
+    <string name="editorscreen_tooltipInsertTable">Tablo ekle</string>
+    <string name="editorscreen_tooltipUploadImage">Resim yükle</string>
+    <string name="editorscreen_tooltipDecreaseIndent">Girinti azalt</string>
+    <string name="editorscreen_tooltipIncreaseIndent">Girinti arttır</string>
+    <string name="editorscreen_tooltipToggleOrderedList">Düzenli liste</string>
+    <string name="editorscreen_tooltipToggleList">Düzensiz liste</string>
+    <string name="editorscreen_tooltipColor">Yazı rengi</string>
+    <string name="editorscreen_tooltipHighlight">Vurgu rengi</string>
+    <string name="editorscreen_tooltipFontSize">Yazı boyutu</string>
+    <string name="editorscreen_tooltipFontFamily">Yazı tipi</string>
 
 
 </resources>

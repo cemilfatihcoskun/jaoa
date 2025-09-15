@@ -16,6 +16,7 @@ import com.sstek.jaoa.core.FileType
 import com.sstek.jaoa.excel.ExcelScreen
 import com.sstek.jaoa.core.decodeUri
 import com.sstek.jaoa.core.encodeUri
+import com.sstek.jaoa.word.SuperDocEditorScreen
 
 @RequiresApi(Build.VERSION_CODES.R)
 @Composable
@@ -44,7 +45,7 @@ fun ApplicationNavigationHost(navController: NavHostController) {
 
             Log.d("AppNavHost", "word/fileUri ${fileUri}")
 
-            QuillEditorScreen(
+            SuperDocEditorScreen(
                 filePath = fileUri,
                 onBack = { navController.popBackStack() }
             )

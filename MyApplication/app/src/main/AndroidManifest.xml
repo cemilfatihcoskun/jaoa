@@ -26,7 +26,7 @@
             android:name=".core.MainActivity"
             android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
             android:exported="true"
-            android:windowSoftInputMode="adjustResize">
+            android:windowSoftInputMode="adjustResize|stateHidden">
 
             <!-- Ana giriş noktası -->
             <intent-filter>

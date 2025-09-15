@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SuperDoc Editor</title>
+
+    <!-- SuperDoc CSS (local) -->
+    <link rel="stylesheet" href="./public/style.css">
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+        #editor {
+            border: 1px solid #ccc;
+            min-height: 500px;
+            margin-top: 10px;
+        }
+        .toolbar {
+            margin-bottom: 10px;
+        }
+        .toolbar button {
+            margin-right: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>SuperDoc Editor</h1>
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+        <input type="file" id="file-input" />
+        <button id="mode-edit">Edit Mode</button>
+        <button id="mode-review">Review Mode</button>
+        <button id="export-btn">Export</button>
+    </div>
+
+    <!-- Editor -->
+    <div id="superdoc-toolbar"></div>
+    <div id="editor"></div>
+
+    <!-- SuperDoc JS (local) -->
+    <!-- SuperDoc JS UMD (global değişken oluşturur) -->
+<script src="./public/superdoc.umd.js"></script>
+<script>
+    // global SuperDocLibrary içinden SuperDoc sınıfını al
+    const SuperDoc = SuperDocLibrary.SuperDoc;
+
+    let superdoc = null;
+
+    document.getElementById('file-input').addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        superdoc = new SuperDoc({
+            selector: '#editor',
+            document: file,
+            documentMode: 'editing'
+        });
+        
+        editor = new SuperDoc({
+			selector: '#editor',
+			toolbar: '#superdoc-toolbar',
+			document: file, // URL, File or document config
+			documentMode: 'editing',
+			pagination: true,
+			rulers: true,
+			onReady: (event) => {
+			  console.log('SuperDoc is ready', event);
+			},
+			onEditorCreate: (event) => {
+			  console.log('Editor is created', event);
+			},
+		  });
+    });
+
+    document.getElementById('mode-edit').addEventListener('click', () => {
+        superdoc?.setDocumentMode('editing');
+    });
+
+    document.getElementById('mode-review').addEventListener('click', () => {
+        superdoc?.setDocumentMode('suggesting');
+    });
+
+    document.getElementById('export-btn').addEventListener('click', async () => {
+        if (!superdoc) {
+            alert("No document loaded!");
+            return;
+        }
+        const exported = await superdoc.export({ isFinalDoc: true });
+        console.log('Exported document:', exported);
+        alert('Document exported! Check console.');
+    });
+</script>
+
+
+</body>
+</html>

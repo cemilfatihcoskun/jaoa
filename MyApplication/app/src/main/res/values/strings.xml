@@ -63,6 +63,7 @@
     <string name="wordViewModel_firstChooseFileMessage">Please choose a file.</string>
     <string name="wordViewModel_fileSavedAsSuccessfullyMessage">The document saved as successfully.</string>
     <string name="wordViewModel_fileSavedAsErrorMessage">The document could not saved as.</string>
+    <string name="wordViewModel_fileLoadErrorMessage">File loading error.</string>
 
     <string name="excelscreen_excelEditor">Excel Editor</string>
     <string name="excelscreen_newExcelDocument">New Excel Document</string>
@@ -83,6 +84,24 @@
     <string name="editorscreen_tooltipRedo">Redo last undone action</string>
     <string name="editorscreen_tooltipUndo">Undo last action</string>
     <string name="editorscreen_tooltipBack">Go back to previous screen</string>
+    <string name="editorscreen_tooltipBold">Bold</string>
+    <string name="editorscreen_tooltipItalic">Italic</string>
+    <string name="editorscreen_tooltipUnderline">Underline</string>
+    <string name="editorscreen_tooltipStrike">Strike</string>
+    <string name="editorscreen_tooltipAlignLeft">Align Left</string>
+    <string name="editorscreen_tooltipAlignCenter">Align Center</string>
+    <string name="editorscreen_tooltipAlignRight">Align Right</string>
+    <string name="editorscreen_tooltipAlignJustify">Align Justify</string>
+    <string name="editorscreen_tooltipInsertTable">Insert Table</string>
+    <string name="editorscreen_tooltipUploadImage">Upload Image</string>
+    <string name="editorscreen_tooltipDecreaseIndent">Decrease Indent</string>
+    <string name="editorscreen_tooltipIncreaseIndent">Increase Indent</string>
+    <string name="editorscreen_tooltipToggleOrderedList">Toggle Ordered List</string>
+    <string name="editorscreen_tooltipToggleList">Toggle List</string>
+    <string name="editorscreen_tooltipColor">Text Color</string>
+    <string name="editorscreen_tooltipHighlight">Highlight Color</string>
+    <string name="editorscreen_tooltipFontSize">Font Size</string>
+    <string name="editorscreen_tooltipFontFamily">Font Family</string>
 
 
 </resources>
