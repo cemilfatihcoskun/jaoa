@@ -5,7 +5,6 @@ import android.app.Activity
 import android.net.Uri
 import android.provider.OpenableColumns
 import android.util.Log
-import android.webkit.WebSettings
 import android.webkit.WebView
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -19,7 +18,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -28,7 +26,6 @@ import com.sstek.jaoa.R
 import com.sstek.jaoa.core.JAOATheme
 import com.sstek.jaoa.core.getFileName
 import com.sstek.jaoa.core.shareDocument
-import com.sstek.jaoa.word.TextFormatToolbar
 import com.sstek.jaoa.word.utils.htmlPrint
 import kotlinx.coroutines.flow.collectLatest
 import java.io.InputStream
@@ -144,18 +141,27 @@ fun SuperDocEditorScreen(
                     .horizontalScroll(scrollState),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButtonWithTooltip(Icons.Default.ArrowBack, R.string.editorscreen_tooltipBack) {
-                    onBack()
-                }
+                IconButtonWithTooltip(
+                    Icons.Default.ArrowBack, R.string.editorscreen_tooltipBack,
+                    {
+                        onBack()
+                    },
+                )
 
                 Spacer(Modifier.width(8.dp))
 
-                IconButtonWithTooltip(Icons.Default.Undo, R.string.editorscreen_tooltipUndo) {
-                    webView?.evaluateJavascript("superdoc.activeEditor.commands.undo() ;", null)
-                }
-                IconButtonWithTooltip(Icons.Default.Redo, R.string.editorscreen_tooltipRedo) {
-                    webView?.evaluateJavascript("superdoc.activeEditor.commands.redo() ;", null)
-                }
+                IconButtonWithTooltip(
+                    Icons.Default.Undo, R.string.editorscreen_tooltipUndo,
+                    {
+                        webView?.evaluateJavascript("superdoc.activeEditor.commands.undo() ;", null)
+                    },
+                )
+                IconButtonWithTooltip(
+                    Icons.Default.Redo, R.string.editorscreen_tooltipRedo,
+                    {
+                        webView?.evaluateJavascript("superdoc.activeEditor.commands.redo() ;", null)
+                    },
+                )
 
                 Spacer(Modifier.width(8.dp))
 
@@ -186,34 +192,48 @@ fun SuperDocEditorScreen(
                 Spacer(Modifier.weight(1f))
 
                 // Kaydet
-                IconButtonWithTooltip(Icons.Default.Save, R.string.editorscreen_tooltipSave) {
-                    webView?.evaluateJavascript("window.saveDocumentToAndroid();", null)
-                }
+                IconButtonWithTooltip(
+                    Icons.Default.Save, R.string.editorscreen_tooltipSave,
+                    {
+                        webView?.evaluateJavascript("window.saveDocumentToAndroid();", null)
+                    },
+                )
 
                 // Farklı kaydet
-                IconButtonWithTooltip(Icons.Default.SaveAs, R.string.editorscreen_tooltipSaveas) {
-                    createDocumentLauncher.launch(
-                        "${context.getString(R.string.wordscreen_defaultDocumentName)}.docx"
-                    )
-                }
+                IconButtonWithTooltip(
+                    Icons.Default.SaveAs, R.string.editorscreen_tooltipSaveas,
+                    {
+                        val documentName = context.getString(R.string.wordscreen_defaultDocumentName)
+
+                        createDocumentLauncher.launch(
+                            "${documentName}.docx"
+                        )
+                    },
+                )
 
                 // Yazdır
-                IconButtonWithTooltip(Icons.Default.Print, R.string.editorscreen_tooltipPrint) {
-                    webView?.let { htmlPrint(it, context) }
-                        ?: Toast.makeText(context, "Document not ready", Toast.LENGTH_SHORT).show()
-                }
+                IconButtonWithTooltip(
+                    Icons.Default.Print, R.string.editorscreen_tooltipPrint,
+                    {
+                        webView?.let { htmlPrint(it, context) }
+                            ?: Toast.makeText(context, "Document not ready", Toast.LENGTH_SHORT).show()
+                    },
+                )
 
                 // Paylaş
-                IconButtonWithTooltip(Icons.Default.Share, R.string.editorscreen_tooltipShare) {
-                    viewModel.selectedFileUri.value?.let { uri ->
-                        shareDocument(
-                            context,
-                            uri,
-                            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                            getFileName(context, uri)
-                        )
-                    } ?: Toast.makeText(context, "Share works after save", Toast.LENGTH_SHORT).show()
-                }
+                IconButtonWithTooltip(
+                    Icons.Default.Share, R.string.editorscreen_tooltipShare,
+                    {
+                        viewModel.selectedFileUri.value?.let { uri ->
+                            shareDocument(
+                                context,
+                                uri,
+                                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                                getFileName(context, uri)
+                            )
+                        } ?: Toast.makeText(context, "Share works after save", Toast.LENGTH_SHORT).show()
+                    },
+                )
             }
 
             // WebView

@@ -102,6 +102,26 @@
     <string name="editorscreen_tooltipHighlight">Highlight Color</string>
     <string name="editorscreen_tooltipFontSize">Font Size</string>
     <string name="editorscreen_tooltipFontFamily">Font Family</string>
+    <string name="editorscreen_tableRows">Rows</string>
+    <string name="editorscreen_tableCols">Columns</string>
+    <string name="editorscreen_insertTable">Insert</string>
+    <string name="editorscreen_tooltipTextFormat">Text Format</string>
+    <string name="editorscreen_tooltipTextFormatHeading1">Heading 1</string>
+    <string name="editorscreen_tooltipTextFormatHeading2">Heading 2</string>
+    <string name="editorscreen_tooltipTextFormatHeading3">Heading 3</string>
+    <string name="editorscreen_tooltipTextFormatHeading4">Heading 4</string>
+    <string name="editorscreen_tooltipTextFormatHeading5">Heading 5</string>
+    <string name="editorscreen_tooltipTextFormatHeading6">Heading 6</string>
+    <string name="editorscreen_tooltipTextFormatHeading7">Heading 7</string>
+    <string name="editorscreen_tooltipTextFormatHeading8">Heading 8</string>
+    <string name="editorscreen_tooltipTextFormatHeading9">Heading 9</string>
+    <string name="editorscreen_tooltipTextFormatIntenseQuote">Intense Quote</string>
+    <string name="editorscreen_tooltipTextFormatListParagraph">List Paragraph</string>
+    <string name="editorscreen_tooltipTextFormatNormal">Normal</string>
+    <string name="editorscreen_tooltipTextFormatQuote">Quote</string>
+    <string name="editorscreen_tooltipTextFormatSubtitle">Subtitle</string>
+    <string name="editorscreen_tooltipTextFormatTitle">Title</string>
+
 
 
 </resources>

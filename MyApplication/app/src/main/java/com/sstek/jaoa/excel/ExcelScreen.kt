@@ -82,7 +82,7 @@ fun ExcelScreen(
                             viewModel.clearSelectedFile()
                             onBack()
                         }
-                    }
+                    },
                 )
             },
             actions = {
@@ -101,7 +101,7 @@ fun ExcelScreen(
                         } else {
                             createDocumentLauncher.launch("${context.resources.getString(R.string.excelscreen_defaultDocumentName)}.xlsx")
                         }
-                    }
+                    },
                 )
 
                 IconButtonWithTooltip(
@@ -109,7 +109,7 @@ fun ExcelScreen(
                     tooltipTextRes = R.string.editorscreen_tooltipSaveas,
                     onClick = {
                         createDocumentLauncher.launch("${context.resources.getString(R.string.excelscreen_defaultDocumentName)}.xlsx")
-                    }
+                    },
                 )
             }
         )
