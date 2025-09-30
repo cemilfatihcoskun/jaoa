@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>SuperDoc Editor</title>
+  
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+
+  <link rel="stylesheet" href="superdoc.css">
+  <style>
+	  /*
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+    }
+    */
+    
+    
+  </style>
+
+
+
+</head>
+<body>
+ <div class="controls" id="controls"></div>
+  <div id="editor"></div>
+  
+  
+ 
+ 
+ 
+  <script src="superdoc.umd.js"></script>
+  <script>
+    const SuperDoc = SuperDocLibrary.SuperDoc;
+    window.superdoc = null;
+    
+function initializeEditor(docFile = null) {
+  if (window.superdoc) {
+    window.superdoc.destroy();
+    document.querySelector('#editor').innerHTML = "";
+  }
+
+  window.superdoc = new SuperDoc({
+    selector: '#editor',
+    toolbar: '#controls',
+    document: docFile,
+    documentMode: 'editing',
+    pagination: true,
+    onReady: () => console.log('SuperDoc Ready'),
+    onEditorCreate: () => console.log('SuperDoc Editor Created')
+  });
+}
+
+function base64ToUint8Array(base64) {
+  const binaryString = atob(base64);
+  const len = binaryString.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  return bytes;
+}
+
+window.loadDocxFromBase64 = function(base64, fileName = null) {
+  try {
+    const bytes = base64ToUint8Array(base64);
+
+    let file;
+    try {
+      file = new File(
+        [bytes],
+        fileName,
+        { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" }
+      );
+    } catch (e) {
+      console.warn("File constructor not supported, fallback to input trick");
+      // Eğer File() desteklenmezse, fallback olarak invisible input hack kullanılabilir
+    }
+
+    console.log("SuperDoc: File created, loading into editor:", fileName);
+    initializeEditor(file);
+  } catch (e) {
+    console.error("loadDocxFromBase64 error:", e);
+  }
+};
+
+window.saveDocumentToAndroid = async function () {
+    console.log("saveDocumentToAndroid: started"); // 🔹
+    try {
+        const blob = await window.superdoc.export({ exportType: ['docx'], triggerDownload: false });
+        console.log("saveDocumentToAndroid: blob created", blob); // 🔹
+
+        const arrayBuffer = await blob.arrayBuffer();
+        console.log("saveDocumentToAndroid: arrayBuffer created, byteLength=", arrayBuffer.byteLength); // 🔹
+
+        const base64 = btoa(
+            new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
+        );
+        console.log("saveDocumentToAndroid: base64 generated, length=", base64.length); // 🔹
+
+        AndroidInterface.receiveFile(base64);
+        console.log("saveDocumentToAndroid: AndroidInterface.receiveFile called"); // 🔹
+    } catch (e) {
+        console.error("saveDocumentToAndroid error:", e);
+    }
+}
+
+  
+
+
+  </script>
+</body>
+</html>

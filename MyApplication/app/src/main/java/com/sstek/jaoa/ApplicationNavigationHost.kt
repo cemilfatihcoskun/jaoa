@@ -8,7 +8,6 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
-import com.sstek.jaoa.word.QuillEditorScreen
 import com.sstek.jaoa.core.MainScreen
 import android.util.Log
 import androidx.annotation.RequiresApi
@@ -16,6 +15,7 @@ import com.sstek.jaoa.core.FileType
 import com.sstek.jaoa.excel.ExcelScreen
 import com.sstek.jaoa.core.decodeUri
 import com.sstek.jaoa.core.encodeUri
+import com.sstek.jaoa.powerpoint.PowerpointEditorScreen
 import com.sstek.jaoa.word.SuperDocEditorScreen
 
 @RequiresApi(Build.VERSION_CODES.R)
@@ -64,6 +64,19 @@ fun ApplicationNavigationHost(navController: NavHostController) {
             )
         }
 
+        composable(
+            route = "powerpoint/{fileUri}",
+            arguments = listOf(navArgument("fileUri") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val fileUriString = backStackEntry.arguments?.getString("fileUri")
+            val fileUri = fileUriString?.let { decodeUri(it) }
+
+            PowerpointEditorScreen(
+                filePath = fileUri,
+                onBack = { navController.popBackStack() }
+            )
+        }
+
     }
 }
 
@@ -80,7 +93,7 @@ fun navigate(navController: NavHostController, fileType: FileType, fileUri: Uri?
         FileType.DOC -> TODO()
         FileType.XLSX -> navController.navigate("excel/$uriEncoded")
         FileType.XLS -> TODO()
-        FileType.PPTX -> ""
+        FileType.PPTX -> navController.navigate("powerpoint/$uriEncoded")
         FileType.PPT -> TODO()
         FileType.UNKNOWN -> ""
     }

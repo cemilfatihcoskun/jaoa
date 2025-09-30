@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<title>PPTX Viewer</title>
+
+<link rel="stylesheet" href="./css/pptxjs.css">
+<link rel="stylesheet" href="./css/nv.d3.min.css">
+
+<script type="text/javascript" src="./js/jquery-1.11.3.min.js"></script>
+<script type="text/javascript" src="./js/jszip.min.js"></script>
+<script type="text/javascript" src="./js/filereader.js"></script>
+<script type="text/javascript" src="./js/d3.min.js"></script>
+<script type="text/javascript" src="./js/nv.d3.min.js"></script>
+<script type="text/javascript" src="./js/pptxjs.js"></script>
+<script type="text/javascript" src="./js/divs2slides.js"></script>
+<script type="text/javascript" src="./js/jquery.fullscreen-min.js"></script>
+
+<style>
+    html, body { margin: 0; padding: 0; }
+    #warper { margin-right: auto; margin-left: auto; width: 900px; }
+    /* Yükleme çubuğunu gizlemek için ek stil */
+    .slides-loadnig-msg { display: none !important; }
+</style>
+</head>
+<body>
+    <div id="warper">
+        <div id="container">
+            <div id="result"></div>
+        </div>
+    </div>
+
+<script>
+// Base64 string'i ArrayBuffer'a çeviren yardımcı fonksiyon (AYNI KALIYOR)
+function base64ToArrayBuffer(base64) {
+    var binary_string = window.atob(base64);
+    var len = binary_string.length;
+    var bytes = new Uint8Array(len);
+    for (var i = 0; i < len; i++) {
+        bytes[i] = binary_string.charCodeAt(i);
+    }
+    return bytes.buffer;
+}
+
+// Android'den gelen Base64'i yükleme fonksiyonu (Son Deneme)
+window.loadPptxFromBase64 = function(base64Data, fileName){
+    console.log("Loading Base64 PPTX file (Direct ArrayBuffer to pptxToHtml): " + fileName);
+    
+    try {
+        var arrayBuffer = base64ToArrayBuffer(base64Data);
+
+        // Kütüphanenin beklediği dosya nesnesini oluşturmak yerine,
+        // ArrayBuffer'ı doğrudan kütüphanenin bilmediği bir parametre ile besliyoruz.
+        // Bu, kütüphanenin içinde bir ArrayBuffer kontrolü varsa yakalanmasını sağlar.
+
+        $("#result").empty();
+        
+        // pptxToHtml çağrısı. ArrayBuffer'ı 'pptxData' gibi bir parametre ile gönderiyoruz.
+        // Bu, kütüphanenin URL'den veya File'dan okumayı atlamasını sağlayabilir.
+        // Kütüphane kaynak kodunda pptxData, file, pptxFileurl gibi değişkenleri kontrol eden bir yer varsa, bu çalışır.
+
+        $("#result").pptxToHtml({
+            // pptxFileUrl ve fileInputId boş bırakılmalı
+            pptxFileUrl: "", 
+            fileInputId: "",
+            // Kütüphanenin içindeki dosya işleme değişkenini hedefliyoruz.
+            pptxData: arrayBuffer, // <--- ArrayBuffer'ı buraya yolluyoruz.
+            
+            slideMode: false,
+            keyBoardShortCut: false
+        });
+
+    } catch(error) {
+        console.error("Error loading PPTX (Final Attempt Failed):", error, error.message);
+    }
+}
+</script>
+
+</body>
+</html>

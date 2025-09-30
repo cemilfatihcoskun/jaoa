@@ -86,7 +86,13 @@ dependencies {
     implementation("com.google.code.gson:gson:2.10.1")
 
     implementation("com.google.accompanist:accompanist-flowlayout:0.36.0")
+
+    //implementation("org.apache.pdfbox:pdfbox:3.0.5")
+
+    //implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.jar"))))
 }
+
+
 
 kapt {
     correctErrorTypes = true

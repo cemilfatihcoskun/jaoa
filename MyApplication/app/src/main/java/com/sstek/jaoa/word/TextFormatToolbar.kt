@@ -1,6 +1,7 @@
 package com.sstek.jaoa.word
 
 import IconButtonWithTooltip
+import android.annotation.SuppressLint
 import android.net.Uri
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
@@ -11,7 +12,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -20,7 +20,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
@@ -33,8 +32,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import com.sstek.jaoa.core.JAOATheme
 import com.sstek.jaoa.R
 
+@SuppressLint("StateFlowValueCalledInComposition")
 @Composable
-fun TextFormatToolbar(webView: WebView?) {
+fun TextFormatToolbar(webView: WebView?, viewModel: WordViewModel) {
     val context = LocalContext.current
 
     val filePickerLauncher = rememberLauncherForActivityResult(
@@ -80,6 +80,10 @@ fun TextFormatToolbar(webView: WebView?) {
 
     val textFormats = listOf("Heading1", "Heading2", "Heading3", "Heading4", "Heading5", "Heading6", "Heading7", "Heading8", "Heading9", "IntenseQuote", "ListParagraph", "Normal", "Quote", "Subtitle", "Title")
 
+    val isBoldSelected by viewModel.isBold.collectAsState()
+    val isItalicSelected by viewModel.isItalic.collectAsState()
+    val isUnderlineSelected by viewModel.isUnderline.collectAsState()
+
     JAOATheme {
         Column(modifier = Modifier.fillMaxWidth()) {
 
@@ -93,24 +97,44 @@ fun TextFormatToolbar(webView: WebView?) {
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                @Composable
-                fun iconButton(icon: ImageVector, tooltipRes: Int, onClick: () -> Unit) {
-                    IconButtonWithTooltip(icon, tooltipRes, onClick = onClick)
+                // Tema Renkleri Tanımlamaları
+                val colorScheme = MaterialTheme.colorScheme
+                val selectedTint = colorScheme.primary // Bold aktifken ikon rengi (Açık veya Koyu Temanın Primary'si)
+                val defaultTint = colorScheme.onSurface // Varsayılan ikon rengi
+                val selectedBackground = colorScheme.surfaceVariant // Bold aktifken arka plan rengi
+
+                IconButtonWithTooltip(
+                    icon = Icons.Default.FormatBold,
+                    contentDescriptionResId = R.string.editorscreen_tooltipBold,
+                    tint = if (isBoldSelected) selectedTint else defaultTint,
+                    backgroundColor = if (isBoldSelected) selectedBackground else Color.Transparent
+                ) {
+                    webView?.evaluateJavascript("superdoc.activeEditor.commands.toggleBold();", null)
+                    viewModel.toggleBold()
                 }
 
-                // Format
-                iconButton(Icons.Default.FormatBold, R.string.editorscreen_tooltipBold) {
-                    webView?.evaluateJavascript("superdoc.activeEditor.commands.toggleBold();", null)
-                }
-                iconButton(Icons.Default.FormatItalic, R.string.editorscreen_tooltipItalic) {
+                IconButtonWithTooltip(
+                    icon = Icons.Default.FormatItalic,
+                    contentDescriptionResId = R.string.editorscreen_tooltipItalic,
+                    tint = if (isItalicSelected) selectedTint else defaultTint,
+                    backgroundColor = if (isItalicSelected) selectedBackground else Color.Transparent
+                ) {
                     webView?.evaluateJavascript("superdoc.activeEditor.commands.toggleItalic();", null)
+                    viewModel.toggleItalic()
                 }
-                iconButton(Icons.Default.FormatUnderlined, R.string.editorscreen_tooltipUnderline) {
-                    webView?.evaluateJavascript("superdoc.activeEditor.commands.toggleUnderline();", null)
+
+                IconButtonWithTooltip(
+                    icon = Icons.Default.FormatUnderlined,
+                    contentDescriptionResId = R.string.editorscreen_tooltipUnderline,
+                    tint = if (isUnderlineSelected) selectedTint else defaultTint,
+                    backgroundColor = if (isUnderlineSelected) selectedBackground else Color.Transparent
+                ) {
+                    webView?.evaluateJavascript("superdoc.activeEditor.commands.toggleUnderlined();", null)
+                    viewModel.toggleUnderline()
                 }
 
                 // Renk ve font
-                iconButton(Icons.Default.BorderColor, R.string.editorscreen_tooltipHighlight) {
+                IconButtonWithTooltip(Icons.Default.BorderColor, R.string.editorscreen_tooltipHighlight) {
                     showHighlightColors = !showHighlightColors
                     showTextColors = false
                     showFontFamily = false
@@ -118,7 +142,7 @@ fun TextFormatToolbar(webView: WebView?) {
                     showTablePanel = false
                     showTextFormat = false
                 }
-                iconButton(Icons.Default.FormatColorText, R.string.editorscreen_tooltipColor) {
+                IconButtonWithTooltip(Icons.Default.FormatColorText, R.string.editorscreen_tooltipColor) {
                     showTextColors = !showTextColors
                     showHighlightColors = false
                     showFontFamily = false
@@ -126,7 +150,7 @@ fun TextFormatToolbar(webView: WebView?) {
                     showTablePanel = false
                     showTextFormat = false
                 }
-                iconButton(Icons.Default.FormatSize, R.string.editorscreen_tooltipFontSize) {
+                IconButtonWithTooltip(Icons.Default.FormatSize, R.string.editorscreen_tooltipFontSize) {
                     showFontSize = !showFontSize
                     showFontFamily = false
                     showHighlightColors = false
@@ -134,7 +158,7 @@ fun TextFormatToolbar(webView: WebView?) {
                     showTablePanel = false
                     showTextFormat = false
                 }
-                iconButton(Icons.Default.FontDownload, R.string.editorscreen_tooltipFontFamily) {
+                IconButtonWithTooltip(Icons.Default.FontDownload, R.string.editorscreen_tooltipFontFamily) {
                     showFontFamily = !showFontFamily
                     showFontSize = false
                     showHighlightColors = false
@@ -144,40 +168,40 @@ fun TextFormatToolbar(webView: WebView?) {
                 }
 
                 // Hizalama
-                iconButton(Icons.Default.FormatAlignLeft, R.string.editorscreen_tooltipAlignLeft) {
+                IconButtonWithTooltip(Icons.Default.FormatAlignLeft, R.string.editorscreen_tooltipAlignLeft) {
                     webView?.evaluateJavascript("superdoc.activeEditor.commands.setTextAlign('left');", null)
                 }
-                iconButton(Icons.Default.FormatAlignCenter, R.string.editorscreen_tooltipAlignCenter) {
+                IconButtonWithTooltip(Icons.Default.FormatAlignCenter, R.string.editorscreen_tooltipAlignCenter) {
                     webView?.evaluateJavascript("superdoc.activeEditor.commands.setTextAlign('center');", null)
                 }
-                iconButton(Icons.Default.FormatAlignRight, R.string.editorscreen_tooltipAlignRight) {
+                IconButtonWithTooltip(Icons.Default.FormatAlignRight, R.string.editorscreen_tooltipAlignRight) {
                     webView?.evaluateJavascript("superdoc.activeEditor.commands.setTextAlign('right');", null)
                 }
-                iconButton(Icons.Default.FormatAlignJustify, R.string.editorscreen_tooltipAlignJustify) {
+                IconButtonWithTooltip(Icons.Default.FormatAlignJustify, R.string.editorscreen_tooltipAlignJustify) {
                     webView?.evaluateJavascript("superdoc.activeEditor.commands.setTextAlign('justify');", null)
                 }
 
                 // Listeler ve indent
-                iconButton(Icons.Default.FormatListBulleted, R.string.editorscreen_tooltipToggleList) {
+                IconButtonWithTooltip(Icons.Default.FormatListBulleted, R.string.editorscreen_tooltipToggleList) {
                     webView?.evaluateJavascript("superdoc.activeEditor.commands.toggleList();", null)
                 }
-                iconButton(Icons.Default.FormatListNumbered, R.string.editorscreen_tooltipToggleOrderedList) {
+                IconButtonWithTooltip(Icons.Default.FormatListNumbered, R.string.editorscreen_tooltipToggleOrderedList) {
                     webView?.evaluateJavascript("superdoc.activeEditor.commands.toggleOrderedList();", null)
                 }
-                iconButton(Icons.Default.FormatIndentIncrease, R.string.editorscreen_tooltipIncreaseIndent) {
+                IconButtonWithTooltip(Icons.Default.FormatIndentIncrease, R.string.editorscreen_tooltipIncreaseIndent) {
                     webView?.evaluateJavascript("superdoc.activeEditor.commands.increaseTextIndent();", null)
                 }
-                iconButton(Icons.Default.FormatIndentDecrease, R.string.editorscreen_tooltipDecreaseIndent) {
+                IconButtonWithTooltip(Icons.Default.FormatIndentDecrease, R.string.editorscreen_tooltipDecreaseIndent) {
                     webView?.evaluateJavascript("superdoc.activeEditor.commands.decreaseTextIndent();", null)
                 }
 
                 // Resim
-                iconButton(Icons.Default.Image, R.string.editorscreen_tooltipUploadImage) {
+                IconButtonWithTooltip(Icons.Default.Image, R.string.editorscreen_tooltipUploadImage) {
                     filePickerLauncher.launch("image/*")
                 }
 
                 // Tablo
-                iconButton(Icons.Default.TableRows, R.string.editorscreen_tooltipInsertTable) {
+                IconButtonWithTooltip(Icons.Default.TableRows, R.string.editorscreen_tooltipInsertTable) {
                     showTablePanel = !showTablePanel
                     showHighlightColors = false
                     showTextColors = false
@@ -186,7 +210,7 @@ fun TextFormatToolbar(webView: WebView?) {
                     showTextFormat = false
                 }
 
-                iconButton(Icons.Default.FontDownloadOff, tooltipRes=R.string.editorscreen_tooltipTextFormat) {
+                IconButtonWithTooltip(Icons.Default.FontDownloadOff, contentDescriptionResId = R.string.editorscreen_tooltipTextFormat) {
                     showTextFormat = !showTextFormat
                     showTablePanel = false
                     showHighlightColors = false
@@ -194,7 +218,6 @@ fun TextFormatToolbar(webView: WebView?) {
                     showFontFamily = false
                     showFontSize = false
                 }
-
             }
 
             // Alt panel

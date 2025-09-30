@@ -12,6 +12,10 @@ import android.util.Log
 import android.widget.Toast
 import java.io.File
 import com.sstek.jaoa.R
+import com.sstek.jaoa.core.FileType.DOC
+import com.sstek.jaoa.core.FileType.PPT
+import com.sstek.jaoa.core.FileType.PPTX
+import com.sstek.jaoa.core.FileType.XLS
 
 fun deleteFile(context: Context, uri: Uri) {
     try {
@@ -70,18 +74,21 @@ fun shareFile(context: Context, uri: Uri, displayName: String) {
 fun saveToMediaStore(context: Context, fileName: String, fileType: FileType, content: ByteArray): Uri? {
     val resolver = context.contentResolver
     val collection = when (fileType) {
-        FileType.DOCX, FileType.DOC -> MediaStore.Files.getContentUri("external")
-        FileType.XLSX, FileType.XLS -> MediaStore.Files.getContentUri("external")
+        FileType.DOC, FileType.DOCX -> MediaStore.Files.getContentUri("external")
+        FileType.XLS, FileType.XLSX -> MediaStore.Files.getContentUri("external")
+        FileType.PPT, FileType.PPTX -> MediaStore.Files.getContentUri("external")
         else -> MediaStore.Files.getContentUri("external")
     }
 
     val values = ContentValues().apply {
         put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
         put(MediaStore.MediaColumns.MIME_TYPE, when (fileType) {
-            FileType.DOCX -> "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
             FileType.DOC -> "application/msword"
-            FileType.XLSX -> "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            FileType.DOCX -> "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
             FileType.XLS -> "application/vnd.ms-excel"
+            FileType.XLSX -> "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            FileType.PPT -> "application/vnd.ms-powerpoint"
+            FileType.PPTX -> "application/vnd.openxmlformats-officedocument.presentationml.presentation"
             else -> "*/*"
         })
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {

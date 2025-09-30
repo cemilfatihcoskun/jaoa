@@ -1,7 +1,6 @@
 package com.sstek.jaoa.core
 
 import android.annotation.SuppressLint
-import android.content.Context
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
@@ -25,23 +24,15 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sstek.jaoa.R
 
 // ViewModel
-class MainScreenViewModel : ViewModel() {
-    var files = mutableStateListOf<Pair<String, Uri>>()
-    var showNewFileMenu = mutableStateOf(false)
-    var searchQuery = mutableStateOf("")
-    var selectedFilter = mutableStateOf<FileType?>(null)
-    var selectedTabIndex = mutableStateOf(1) // 0 = Internal, 1 = External
-}
+
 
 @RequiresApi(Build.VERSION_CODES.R)
 @SuppressLint("UnrememberedMutableState")
@@ -71,9 +62,9 @@ fun MainScreen(
 
     val updateFiles: () -> Unit = {
         val filesList = if (selectedTabIndex == 0) {
-            getInternalFiles(context, listOf(FileType.DOCX, FileType.XLSX))
+            getInternalFiles(context, listOf(FileType.DOCX, FileType.XLSX, FileType.PPTX))
         } else {
-            if (hasStoragePermission) getExternalFiles(context, listOf(FileType.DOCX, FileType.XLSX))
+            if (hasStoragePermission) getExternalFiles(context, listOf(FileType.DOCX, FileType.XLSX, FileType.PPTX))
             else emptyList()
         }
         viewModel.files.clear()
@@ -154,6 +145,12 @@ fun MainScreen(
                             icon = Icons.Default.TableChart,
                             isSelected = selectedFilter == FileType.XLSX
                         ) { viewModel.selectedFilter.value = FileType.XLSX }
+
+                        FilterButton(
+                            label = "Pptx",
+                            icon = Icons.Default.Slideshow,
+                            isSelected = selectedFilter == FileType.PPTX
+                        ) { viewModel.selectedFilter.value = FileType.PPTX }
                     }
                 }
             },
@@ -170,7 +167,8 @@ fun MainScreen(
                                 if (hasStoragePermission) {
                                     filePickerLauncher.launch(arrayOf(
                                         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                                        "application/vnd.openxmlformats-officedocument.presentationml.presentation"
                                     ))
                                 } else {
                                     Toast.makeText(

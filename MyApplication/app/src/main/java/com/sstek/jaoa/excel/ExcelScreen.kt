@@ -74,7 +74,7 @@ fun ExcelScreen(
             navigationIcon = {
                 IconButtonWithTooltip(
                     icon = Icons.Default.ArrowBack,
-                    tooltipTextRes = R.string.editorscreen_tooltipBack,
+                    contentDescriptionResId = R.string.editorscreen_tooltipBack,
                     onClick = {
                         if (viewModel.hasUnsavedChanges()) {
                             showExitDialog = true
@@ -89,7 +89,7 @@ fun ExcelScreen(
 
                 IconButtonWithTooltip(
                     icon = Icons.Filled.Save,
-                    tooltipTextRes = R.string.editorscreen_tooltipSave,
+                    contentDescriptionResId = R.string.editorscreen_tooltipSave,
                     onClick = {
                         if (selectedFileUri != null) {
                             val uriString = selectedFileUri.toString()
@@ -106,7 +106,7 @@ fun ExcelScreen(
 
                 IconButtonWithTooltip(
                     icon = Icons.Filled.SaveAs,
-                    tooltipTextRes = R.string.editorscreen_tooltipSaveas,
+                    contentDescriptionResId = R.string.editorscreen_tooltipSaveas,
                     onClick = {
                         createDocumentLauncher.launch("${context.resources.getString(R.string.excelscreen_defaultDocumentName)}.xlsx")
                     },

@@ -25,8 +25,12 @@ enum class FileType(val extension: String) {
 
         fun fromMime(mime: String): FileType {
             when (mime) {
+                "application/msword" -> return DOC
                 "application/vnd.openxmlformats-officedocument.wordprocessingml.document" -> return DOCX
+                "application/vnd.ms-excel" -> return XLS
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" -> return XLSX
+                "application/vnd.ms-powerpoint" -> return PPT
+                "application/vnd.openxmlformats-officedocument.presentationml.presentation" -> return PPTX
                 else -> return UNKNOWN
             }
         }
