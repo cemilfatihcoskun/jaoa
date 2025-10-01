@@ -85,7 +85,7 @@ fun TextFormatToolbar(webView: WebView?, viewModel: WordViewModel) {
     val isUnderlineSelected by viewModel.isUnderline.collectAsState()
 
     JAOATheme {
-        Column(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.fillMaxWidth().navigationBarsPadding()) {
 
             // Toolbar: horizontal scrollable
             val toolbarScrollState = rememberScrollState()

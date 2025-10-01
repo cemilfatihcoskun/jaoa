@@ -149,7 +149,7 @@ fun SuperDocEditorScreen(
 
 
     JAOATheme {
-        Column(modifier = Modifier.fillMaxSize().statusBarsPadding()) {
+        Column(modifier = Modifier.fillMaxSize().statusBarsPadding().imePadding()) {
 
             // Toolbar
             Row(
@@ -271,9 +271,6 @@ fun SuperDocEditorScreen(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
-                    .navigationBarsPadding()
-                    .imePadding()
-                    //.clipToBounds()
                 ,
                 factory = { ctx ->
                     WebView(ctx).apply {

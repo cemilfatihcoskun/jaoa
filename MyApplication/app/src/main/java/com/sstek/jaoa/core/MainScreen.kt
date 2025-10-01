@@ -96,6 +96,7 @@ fun MainScreen(
                     modifier = Modifier
                         .statusBarsPadding()
                         .padding(top = 8.dp, start = 8.dp, end = 8.dp, bottom = 0.dp)
+                        .imePadding()
                 ) {
                     val tabs = listOf(
                         context.getString(R.string.mainscreen_internalStorage),
@@ -188,7 +189,8 @@ fun MainScreen(
                 val layoutDirection = LocalLayoutDirection.current
                 Column(
                     modifier = Modifier
-                        .statusBarsPadding()
+                        .fillMaxWidth()
+                        .navigationBarsPadding()
                         .padding(bottom = 8.dp)
                 ) {
                     NewFileBottomBar(onCreateNew)
