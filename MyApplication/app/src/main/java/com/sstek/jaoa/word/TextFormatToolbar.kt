@@ -3,6 +3,7 @@ package com.sstek.jaoa.word
 import IconButtonWithTooltip
 import android.annotation.SuppressLint
 import android.net.Uri
+import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.shrinkVertically
@@ -26,32 +27,90 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import android.webkit.WebView
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.sstek.jaoa.core.JAOATheme
 import com.sstek.jaoa.R
+import java.io.File
+import java.io.InputStream
 
 @SuppressLint("StateFlowValueCalledInComposition")
 @Composable
 fun TextFormatToolbar(webView: WebView?, viewModel: WordViewModel) {
     val context = LocalContext.current
 
+    // URI → Base64
+    fun uriToBase64(uri: Uri?): String {
+        Log.d("SuperDocEditorScreen", "uri=$uri")
+        if (uri == null || uri.toString().isEmpty()) return ""
+
+        try {
+            val inputStream: InputStream? = context.contentResolver.openInputStream(uri)
+            val bytes = inputStream?.readBytes()
+            inputStream?.close()
+            // NO_WRAP: Base64 çıktısında yeni satır karakteri olmamasını sağlar (JS için önemli)
+            return android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP)
+        } catch (e: Exception) {
+            Log.e("SuperDocEditorScreen", "Error converting URI to Base64: ${e.message}")
+            return ""
+        }
+    }
+
+
+
+    // Dosya seçici launcher - Resim URI'sini Base64'e çevirip JS'e enjekte eder
     val filePickerLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         uri?.let { selectedUri ->
-            val jsCode = """
-                (function() {
-                    const editor = superdoc.activeEditor;
-                    editor.commands.setImage({
-                        src: '${selectedUri}'
-                    });
-                })();
-            """.trimIndent()
-            webView?.evaluateJavascript(jsCode, null)
+            val client = webView?.webChromeClient
+
+            // Orijinal file chooser isteğini kapat
+            if (client is MyWebChromeClient) {
+                client.uploadMessage?.onReceiveValue(null)
+                client.uploadMessage = null
+            }
+
+            try {
+                // InputStream al ve Base64'e çevir
+                val inputStream = context.contentResolver.openInputStream(selectedUri)
+                val bytes = inputStream?.use { it.readBytes() } ?: ByteArray(0)
+                val base64Data = android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP)
+
+                if (base64Data.isNotEmpty()) {
+                    // mime tipini al (image/png, image/jpeg, ...)
+                    val mimeType = context.contentResolver.getType(selectedUri) ?: "image/png"
+                    val dataUri = "data:$mimeType;base64,$base64Data"
+                    val escapedDataUri = dataUri.replace("'", "\\'")
+
+                    // JS komutu ile resim ekleme
+                    val jsCommand = """
+                    (function waitForEditor() {
+                        if (window.superdoc == null || window.superdoc.activeEditor == null) {
+                            return;
+                        }
+                        if (window.superdoc.activeEditor.commands.setImage) {
+                            window.superdoc.activeEditor.commands.setImage({ src: '$escapedDataUri' });
+                            console.log('Image inserted successfully.');
+                        } else {
+                            setTimeout(waitForEditor, 100);
+                        }
+                    })();
+                """.trimIndent()
+
+                    webView?.evaluateJavascript(jsCommand.replace("\n", ""), null)
+                } else {
+                    Toast.makeText(context, "Resim yüklenemedi", Toast.LENGTH_LONG).show()
+                }
+            } catch (e: Exception) {
+                Log.e("SuperDocEditor", "Image insertion failed: ${e.message}")
+                Toast.makeText(context, "Resim ekleme hatası", Toast.LENGTH_LONG).show()
+            }
         }
     }
+
 
     var showHighlightColors by remember { mutableStateOf(false) }
     var showTextColors by remember { mutableStateOf(false) }

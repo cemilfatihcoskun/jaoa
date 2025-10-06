@@ -121,7 +121,7 @@
     <string name="editorscreen_tooltipTextFormatQuote">Quote</string>
     <string name="editorscreen_tooltipTextFormatSubtitle">Subtitle</string>
     <string name="editorscreen_tooltipTextFormatTitle">Title</string>
-
+    <string name="editorscreen_imageLoadError">Image could not inserted.</string>
 
 
 </resources>

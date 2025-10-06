@@ -33,10 +33,10 @@
  
  
   <script src="superdoc.umd.js"></script>
-  <script>
-    const SuperDoc = SuperDocLibrary.SuperDoc;
-    window.superdoc = null;
-    
+<script>
+const SuperDoc = SuperDocLibrary.SuperDoc;
+window.superdoc = null;
+
 function initializeEditor(docFile = null) {
   if (window.superdoc) {
     window.superdoc.destroy();
@@ -45,7 +45,7 @@ function initializeEditor(docFile = null) {
 
   window.superdoc = new SuperDoc({
     selector: '#editor',
-    toolbar: '#controls',
+    toolbar: '#controlsa',
     document: docFile,
     documentMode: 'editing',
     pagination: true,
@@ -54,32 +54,37 @@ function initializeEditor(docFile = null) {
   });
 }
 
+// Base64 → Uint8Array
 function base64ToUint8Array(base64) {
-  const binaryString = atob(base64);
-  const len = binaryString.length;
+  const binary = atob(base64);
+  const len = binary.length;
   const bytes = new Uint8Array(len);
   for (let i = 0; i < len; i++) {
-    bytes[i] = binaryString.charCodeAt(i);
+    bytes[i] = binary.charCodeAt(i);
   }
   return bytes;
 }
 
-window.loadDocxFromBase64 = function(base64, fileName = null) {
+// Uint8Array → Base64 (binary-safe)
+function uint8ArrayToBase64(u8Arr) {
+  let CHUNK_SIZE = 0x8000; // büyük dosyalar için parçala
+  let index = 0;
+  let length = u8Arr.length;
+  let result = '';
+  let slice;
+  while (index < length) {
+    slice = u8Arr.subarray(index, Math.min(index + CHUNK_SIZE, length));
+    result += String.fromCharCode.apply(null, slice);
+    index += CHUNK_SIZE;
+  }
+  return btoa(result);
+}
+
+// Load docx
+window.loadDocxFromBase64 = function(base64, fileName = "document.docx") {
   try {
     const bytes = base64ToUint8Array(base64);
-
-    let file;
-    try {
-      file = new File(
-        [bytes],
-        fileName,
-        { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" }
-      );
-    } catch (e) {
-      console.warn("File constructor not supported, fallback to input trick");
-      // Eğer File() desteklenmezse, fallback olarak invisible input hack kullanılabilir
-    }
-
+    const file = new File([bytes], fileName, { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
     console.log("SuperDoc: File created, loading into editor:", fileName);
     initializeEditor(file);
   } catch (e) {
@@ -87,30 +92,67 @@ window.loadDocxFromBase64 = function(base64, fileName = null) {
   }
 };
 
-window.saveDocumentToAndroid = async function () {
-    console.log("saveDocumentToAndroid: started"); // 🔹
-    try {
-        const blob = await window.superdoc.export({ exportType: ['docx'], triggerDownload: false });
-        console.log("saveDocumentToAndroid: blob created", blob); // 🔹
+// Save docx
+window.saveDocumentToAndroid = async function() {
+  try {
+    const blob = await window.superdoc.export({ exportType: ['docx'], triggerDownload: false });
+    const arrayBuffer = await blob.arrayBuffer();
+    const u8Arr = new Uint8Array(arrayBuffer);
+    const base64 = uint8ArrayToBase64(u8Arr);
+    AndroidInterface.receiveFile(base64);
+    console.log("Document saved and sent to Android successfully.");
+  } catch (e) {
+    console.error("saveDocumentToAndroid error:", e);
+  }
+};
 
-        const arrayBuffer = await blob.arrayBuffer();
-        console.log("saveDocumentToAndroid: arrayBuffer created, byteLength=", arrayBuffer.byteLength); // 🔹
-
-        const base64 = btoa(
-            new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
-        );
-        console.log("saveDocumentToAndroid: base64 generated, length=", base64.length); // 🔹
-
-        AndroidInterface.receiveFile(base64);
-        console.log("saveDocumentToAndroid: AndroidInterface.receiveFile called"); // 🔹
-    } catch (e) {
-        console.error("saveDocumentToAndroid error:", e);
-    }
+window.insertImageFile = function(blob, fileName) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const dataUrl = e.target.result;
+        if (window.superdoc && window.superdoc.activeEditor) {
+            window.superdoc.activeEditor.commands.insertImage({
+                src: dataUrl,
+                name: fileName || "image.png"
+            });
+            console.log("Image inserted into document as inline image");
+        } else {
+            console.error("SuperDoc editor not ready");
+        }
+    };
+    reader.readAsDataURL(blob);
 }
 
-  
+window.goToPage = function(page) {
+    if (!window.superdoc || !window.superdoc.activeEditor) return;
 
+    const editor = window.superdoc.activeEditor;
+    const wrappers = editor.view.dom.querySelectorAll(".pagination-break-wrapper");
+    if (!wrappers.length) return;
 
-  </script>
+    // Sayfa sınır kontrolü
+    if (page < 1) page = 1;
+    if (page > wrappers.length) page = wrappers.length;
+
+    const wrapper = wrappers[page - 1];
+    const inner = wrapper.querySelector(".pagination-inner");
+    const header = inner ? inner.querySelector(".pagination-section-header") : null;
+
+    // **Yeni Scroll Hedefi:** Header varsa onu, yoksa wrapper'ı kullan
+    const targetElement = header || wrapper;
+
+    // Scroll işlemini scrollIntoView ile yap
+    targetElement.scrollIntoView({
+        behavior: 'instant', // Anında geçiş (smooth da kullanabilirsiniz)
+        block: 'start'       // Elementi viewport'un en üstüne getir
+    });
+
+    console.log("Scrolled to page", page, "using scrollIntoView at element:", targetElement);
+
+    // Not: Bu kısım artık gereksiz, doğru offset hesaplanmış olabilir:
+    // window.scroll(0, wrapper.offsetTop + (header ? header.offsetTop : 0));
+}
+
+</script>
 </body>
 </html>

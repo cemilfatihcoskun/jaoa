@@ -122,5 +122,6 @@
     <string name="editorscreen_tooltipTextFormatQuote">Alıntı</string>
     <string name="editorscreen_tooltipTextFormatSubtitle">Alt Başlık</string>
     <string name="editorscreen_tooltipTextFormatTitle">Başlık</string>
+    <string name="editorscreen_imageLoadError">Resim yüklenemedi.</string>
 
 </resources>

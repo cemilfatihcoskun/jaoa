@@ -29,6 +29,8 @@ import com.sstek.jaoa.core.getFileName
 import com.sstek.jaoa.core.shareDocument
 import com.sstek.jaoa.word.utils.htmlPrint
 import kotlinx.coroutines.flow.collectLatest
+import java.io.File
+import java.io.IOException
 import java.io.InputStream
 
 @Composable
@@ -46,18 +48,73 @@ fun SuperDocEditorScreen(
     var pageDropdownExpanded by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
 
-    // Dosya seçici launcher
+    fun uriToBase64(uri: Uri?): String {
+        Log.d("SuperDocEditorScreen", "uri=$uri")
+        if (uri == null || uri.toString().isEmpty()) return ""
+
+        // Kotlin'de 'use' bloğu, InputStream'in işlemi bittiğinde veya hata oluştuğunda
+        // otomatik olarak kapatılmasını (close) garanti eder. Bu, daha güvenli bir yaklaşımdır.
+        try {
+            val bytes = context.contentResolver.openInputStream(uri)?.use { inputStream ->
+                inputStream.readBytes()
+            } ?: return "" // InputStream null ise veya okuma başarısız olursa boş döndür.
+
+            // NO_WRAP: Base64 çıktısında yeni satır karakteri olmamasını sağlar (JS için zorunlu)
+            return android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP)
+        } catch (e: IOException) {
+            Log.e("SuperDocEditorScreen", "I/O Error converting URI to Base64: ${e.message}")
+            return ""
+        } catch (e: Exception) {
+            Log.e("SuperDocEditorScreen", "General Error converting URI to Base64: ${e.message}")
+            return ""
+        }
+    }
+
+
     val filePickerLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
-        uri?.let {
+        uri?.let { selectedUri ->
             val client = webView?.webChromeClient
             if (client is MyWebChromeClient) {
-                client.uploadMessage?.onReceiveValue(arrayOf(it))
+                client.uploadMessage?.onReceiveValue(null)
                 client.uploadMessage = null
+            }
+
+            // Mime type kontrolü (isteğe bağlı)
+            val mimeType = context.contentResolver.getType(selectedUri) ?: ""
+            if (!mimeType.startsWith("image/")) {
+                Toast.makeText(context, "Please select an image", Toast.LENGTH_SHORT).show()
+                return@let
+            }
+
+            try {
+                // 1️⃣ Temp dosyaya kopyala
+                val inputStream = context.contentResolver.openInputStream(selectedUri)
+                val tempFile = File(context.filesDir, "superdoc_temp_image.png")
+                inputStream?.use { input -> tempFile.outputStream().use { output -> input.copyTo(output) } }
+
+                // 2️⃣ JS komutu ile setImage çağır
+                val jsCommand = """
+                (function waitForEditor() {
+                    if (window.superdoc?.activeEditor?.commands?.setImage) {
+                        window.superdoc.activeEditor.commands.setImage({ src: 'file://${tempFile.absolutePath}' });
+                        console.log('Image inserted from temp file:', '${tempFile.absolutePath}');
+                    } else {
+                        setTimeout(waitForEditor, 100);
+                    }
+                })();
+            """.trimIndent()
+
+                webView?.evaluateJavascript(jsCommand.replace("\n", ""), null)
+            } catch (e: Exception) {
+                Log.e("SuperDoc", "Failed to insert image: ${e.message}")
+                Toast.makeText(context, "Image insertion failed", Toast.LENGTH_SHORT).show()
             }
         }
     }
+
+
 
     // "Farklı kaydet" için dosya oluşturucu
     val createDocumentLauncher = rememberLauncherForActivityResult(
@@ -86,25 +143,25 @@ fun SuperDocEditorScreen(
             webView?.evaluateJavascript(
                 """
                 (function() {
-                    if (window.superdoc == null) {
-                        return [1, 1];
+                    if (!window.superdoc || !window.superdoc.activeEditor) return [1, 1];
+
+                    let editor = window.superdoc.activeEditor;
+                    let scrollContainer = editor.view.dom.closest('.super-editor') || editor.view.dom;
+
+                    let scrollMid = window.scrollY + window.innerHeight / 2;
+                    
+                    let separators = editor.view.dom.querySelectorAll('.pagination-break-wrapper');
+                    
+                    let currentPage = 1;
+                    let lastSeperator = 0;
+                    for (let i = 0; i < separators.length; i++) {
+                        if (scrollMid >= separators[i].offsetTop) {
+                            currentPage = i + 1;
+                            lastSeperator = i;
+                        } else break;
                     }
-                    
-                    const editorEl = document.querySelector('#editor');
-                    if (editorEl === null) {
-                        return [1, 1];
-                    }
-                    
-                    if (window.superdoc.activeEditor == null) {
-                        return [1, 1];
-                    }
-                    
-                    const pageHeight = 1123;
-                    const totalHeight = editorEl.scrollHeight;
-                    const scrollTop = editorEl.scrollTop || 0;
-                    const currentPage = Math.floor(scrollTop / pageHeight) + 1;
-                    
-                    const totalPages = window.superdoc.activeEditor.currentTotalPages;
+
+                    let totalPages = editor.currentTotalPages;
                     return [currentPage, totalPages];
                 })();
                 """
@@ -123,17 +180,7 @@ fun SuperDocEditorScreen(
         }
     }
 
-    // URI → Base64
-    fun uriToBase64(uri: Uri?): String {
-        Log.d("SuperDocEditorScreen", "uri=$uri")
-        if (uri == null || uri.toString().isEmpty()) {
-            return android.util.Base64.encodeToString("".toByteArray(), android.util.Base64.NO_WRAP)
-        }
-        val inputStream: InputStream? = context.contentResolver.openInputStream(uri)
-        val bytes = inputStream?.readBytes()
-        inputStream?.close()
-        return android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP)
-    }
+
 
     fun getFileNameFromUri(uri: Uri): String {
         var name = "document.docx"
@@ -198,7 +245,7 @@ fun SuperDocEditorScreen(
                                 text = { Text("$i") },
                                 onClick = {
                                     webView?.evaluateJavascript(
-                                        "document.querySelector('#editor').scrollTop = ${(i - 1) * 1123};",
+                                        "window.goToPage($i)",
                                         null
                                     )
                                     pageDropdownExpanded = false
