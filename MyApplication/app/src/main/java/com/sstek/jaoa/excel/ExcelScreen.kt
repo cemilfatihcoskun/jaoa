@@ -59,7 +59,7 @@ fun ExcelScreen(
         }
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
+    Column(modifier = Modifier.fillMaxSize().imePadding().navigationBarsPadding()) {
 
         TopAppBar(
             title = {
@@ -167,6 +167,12 @@ fun ExcelScreen(
                             android.util.Log.d("ExcelEditor", "📱 Ready event received from JavaScript")
                             viewModel.onWebViewReady(this@apply) // ✅ WebView referansını gönder
                         }
+
+                        @android.webkit.JavascriptInterface
+                        fun setMyIsDirty(flag: String) {
+                            android.util.Log.d("ExcelEditor", "📱 setMyIsDirty event received from JavaScript")
+                            viewModel.setMyIsDirty(flag.toBoolean())
+                        }
                     }, "AndroidInterface")
 
                     loadUrl("file:///android_asset/excel_editor/simple_editor.html")
@@ -176,29 +182,35 @@ fun ExcelScreen(
         )
     }
 
-
+    val myIsDirty: Boolean = viewModel.myIsDirty.collectAsState().value
     if (showExitDialog) {
-        AlertDialog(
-            onDismissRequest = { showExitDialog = false },
-            title = { Text(context.resources.getString(R.string.excelscreen_unsavedChangesTitle)) },
-            text = { Text(context.resources.getString(R.string.excelscreen_unsavedChangesContent)) },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showExitDialog = false
-                        viewModel.clearSelectedFile()
-                        onBack()
+        if (!myIsDirty) {
+            showExitDialog = false
+            viewModel.clearSelectedFile()
+            onBack()
+        } else {
+            AlertDialog(
+                onDismissRequest = { showExitDialog = false },
+                title = { Text(context.resources.getString(R.string.excelscreen_unsavedChangesTitle)) },
+                text = { Text(context.resources.getString(R.string.excelscreen_unsavedChangesContent)) },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            showExitDialog = false
+                            viewModel.clearSelectedFile()
+                            onBack()
+                        }
+                    ) {
+                        Text(context.resources.getString(R.string.excelscreen_confirm))
                     }
-                ) {
-                    Text(context.resources.getString(R.string.excelscreen_confirm))
+                },
+                dismissButton = {
+                    TextButton(onClick = { showExitDialog = false }) {
+                        Text(context.resources.getString(R.string.excelscreen_cancel))
+                    }
                 }
-            },
-            dismissButton = {
-                TextButton(onClick = { showExitDialog = false }) {
-                    Text(context.resources.getString(R.string.excelscreen_cancel))
-                }
-            }
-        )
+            )
+        }
     }
 
 

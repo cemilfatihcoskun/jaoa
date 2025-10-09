@@ -158,6 +158,7 @@
 <script src="./demoData/sheetDataVerification.js"></script>
 
 <script>
+	window.myIsDirty = false;
 
     function setLuckysheetSize() {
         const container = document.getElementById('luckysheet');
@@ -269,7 +270,11 @@
                         // console.info('cellUpdateBefore',r,c,value,isRefresh)
                     },
           cellUpdated: function(r, c, oldValue, newValue, isRefresh){
-            console.info('cellUpdated', r, c, oldValue, newValue, isRefresh)
+            console.info('cellUpdated', r, c, oldValue, newValue, isRefresh);
+            window.myIsDirty = true;
+			if (window.AndroidInterface && typeof window.AndroidInterface.setMyIsDirty === 'function') {
+				window.AndroidInterface.setMyIsDirty(window.myIsDirty);
+			}
             if (newValue && typeof newValue === 'object') {
             const v = newValue.v;
             const f = newValue.f;
@@ -388,6 +393,10 @@
                                         hook: {
                 cellUpdated: function(r, c, oldValue, newValue, isRefresh) {
     console.info('cellUpdated', r, c, oldValue, newValue, isRefresh)
+	window.myIsDirty = true;
+	if (window.AndroidInterface && typeof window.AndroidInterface.setMyIsDirty === 'function') {
+		window.AndroidInterface.setMyIsDirty(window.myIsDirty);
+	}
 
     if (newValue && typeof newValue === 'object') {
         const v = newValue.v;

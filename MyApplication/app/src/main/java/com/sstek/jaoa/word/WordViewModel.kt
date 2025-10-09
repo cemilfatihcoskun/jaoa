@@ -5,8 +5,6 @@ import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.sstek.jaoa.word.utils.convertHtmlToXwpf
-import com.sstek.jaoa.word.utils.xwpfToHtml
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -60,34 +58,7 @@ class WordViewModel(application: Application) : AndroidViewModel(application) {
         _selectedFileUri.value = uri
     }
 
-    // ---------------------- Dosya yükleme ----------------------
-    fun loadAndConvert(uri: Uri) {
-        if (_isLoading.value) {
-            viewModelScope.launch { _toastMessage.emit("Busy, please wait") }
-            return
-        }
-        _isLoading.value = true
 
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val inputStream = when (uri.scheme) {
-                    "content" -> context.contentResolver.openInputStream(uri)
-                    "file", null -> File(uri.path ?: "").inputStream()
-                    else -> null
-                }
-
-                val document = inputStream?.use { XWPFDocument(it) }
-                val html = document?.let { xwpfToHtml(context, it) }
-                _htmlContent.value = html
-                _selectedFileUri.value = uri
-            } catch (e: Exception) {
-                e.printStackTrace()
-                _toastMessage.emit(context.getString(R.string.wordViewModel_fileLoadErrorMessage))
-            } finally {
-                _isLoading.value = false
-            }
-        }
-    }
 
     fun clearSelectedFile() {
         _selectedFileUri.value = null

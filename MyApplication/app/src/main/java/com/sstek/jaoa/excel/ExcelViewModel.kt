@@ -37,6 +37,9 @@ class ExcelViewModel(application: Application) : AndroidViewModel(application) {
     private val _excelJsonData = MutableStateFlow<String?>(null)
     val excelJsonData: StateFlow<String?> = _excelJsonData
 
+    private val _myIsDirty = MutableStateFlow(false)
+    val myIsDirty: StateFlow<Boolean> = _myIsDirty
+
     // ✅ WebView referansı
     private var currentWebView: WebView? = null
 
@@ -149,6 +152,9 @@ class ExcelViewModel(application: Application) : AndroidViewModel(application) {
         // ✅ Geçerli URI varsa normal save
         Log.d("ExcelViewModel", "Saving to existing file: $uri")
         performSave(webView, uri)
+
+        _myIsDirty.value = false
+        webView.evaluateJavascript("window.myIsDirty = false;", null)
     }
 
 
@@ -270,5 +276,9 @@ class ExcelViewModel(application: Application) : AndroidViewModel(application) {
         webView.evaluateJavascript(jsCode) { result ->
             Log.d("ExcelViewModel", "Load result: $result")
         }
+    }
+
+    fun setMyIsDirty(flag: Boolean) {
+        _myIsDirty.value = flag
     }
 }

@@ -1,28 +1,22 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>SuperDoc Editor</title>
-  
-
+<meta charset="UTF-8">
+<title>SuperDoc Editor</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<link rel="stylesheet" href="superdoc.css">
+<style>
 
 
-  <link rel="stylesheet" href="superdoc.css">
-  <style>
-	  /*
-    html, body {
-      margin: 0;
-      padding: 0;
-      height: 100vh;
-    }
-    */
-    
-    
-  </style>
+@page { size: A4; margin: 2cm; }
+  /* Yazdırma için fazlalıkları gizle */
+  .pagination-separator,
+  .pagination-spacer {
+    display: none !important;
+  }
 
 
-
+</style>
 </head>
 <body>
  <div class="controls" id="controls"></div>
@@ -45,7 +39,7 @@ function initializeEditor(docFile = null) {
 
   window.superdoc = new SuperDoc({
     selector: '#editor',
-    toolbar: '#controlsa',
+    toolbar: '#controls',
     document: docFile,
     documentMode: 'editing',
     pagination: true,
@@ -153,6 +147,7 @@ window.goToPage = function(page) {
     // window.scroll(0, wrapper.offsetTop + (header ? header.offsetTop : 0));
 }
 
+initializeEditor();
 </script>
 </body>
 </html>

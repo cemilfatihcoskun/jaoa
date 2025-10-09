@@ -22,12 +22,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sstek.jaoa.R
 import com.sstek.jaoa.core.JAOATheme
 import com.sstek.jaoa.core.getFileName
 import com.sstek.jaoa.core.shareDocument
-import com.sstek.jaoa.word.utils.htmlPrint
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import java.io.File
 import java.io.IOException
@@ -292,8 +293,8 @@ fun SuperDocEditorScreen(
                 IconButtonWithTooltip(
                     Icons.Default.Print, R.string.editorscreen_tooltipPrint,
                     onClick = {
-                        webView?.let { htmlPrint(it, context) }
-                            ?: Toast.makeText(context, "Document not ready", Toast.LENGTH_SHORT).show()
+                        webView?.let { printHtml(it, context, getFileName(context, viewModel.selectedFileUri.value!!)) }
+                            ?: Toast.makeText(context, context.getString(R.string.wordscreen_documentNotReadyMessage), Toast.LENGTH_SHORT).show()
                     },
                 )
 

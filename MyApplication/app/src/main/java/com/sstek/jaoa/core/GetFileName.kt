@@ -6,7 +6,11 @@ import android.net.Uri
 import android.provider.OpenableColumns
 import java.io.File
 
-fun getFileName(context: Context, uri: Uri): String {
+fun getFileName(context: Context, uri: Uri?): String {
+    if (uri == null) {
+        return "Unknown"
+    }
+
     return when (uri.scheme) {
         "content" -> {
             var name: String? = null
