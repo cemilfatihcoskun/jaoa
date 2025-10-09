@@ -1,6 +1,7 @@
 package com.sstek.jaoa.excel
 
 import IconButtonWithTooltip
+import android.content.Context
 import android.net.Uri
 import android.util.Log
 import android.webkit.WebView
@@ -36,8 +37,10 @@ fun ExcelScreen(
 
     val isLoading by viewModel.isLoading.collectAsState()
     val selectedFileUri by viewModel.selectedFileUri.collectAsState()
+    val isDocumentModified = viewModel.isDocumentModified.collectAsState()
 
-
+    // 1. Yeni durum: Çıkış onaylama iletişim kutusunun gösterilip gösterilmeyeceğini yönetir
+    val showExitConfirmationDialog = remember { mutableStateOf(false) }
 
     val createDocumentLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
@@ -47,8 +50,6 @@ fun ExcelScreen(
         }
     }
 
-
-    var showExitDialog by remember { mutableStateOf(false) }
 
 
     LaunchedEffect(filePath) {
@@ -76,12 +77,13 @@ fun ExcelScreen(
                     icon = Icons.Default.ArrowBack,
                     contentDescriptionResId = R.string.editorscreen_tooltipBack,
                     onClick = {
-                        if (viewModel.hasUnsavedChanges()) {
-                            showExitDialog = true
-                        } else {
-                            viewModel.clearSelectedFile()
-                            onBack()
+                        if (isDocumentModified.value) {
+                            showExitConfirmationDialog.value = true
+                            return@IconButtonWithTooltip
                         }
+
+                        viewModel.clearSelectedFile()
+                        onBack()
                     },
                 )
             },
@@ -128,7 +130,6 @@ fun ExcelScreen(
             }
         }
 
-        // WebView
         AndroidView(
             factory = { context ->
                 WebView(context).apply {
@@ -164,14 +165,15 @@ fun ExcelScreen(
 
                         @android.webkit.JavascriptInterface
                         fun onEditorReady() {
-                            android.util.Log.d("ExcelEditor", "📱 Ready event received from JavaScript")
-                            viewModel.onWebViewReady(this@apply) // ✅ WebView referansını gönder
+                            android.util.Log.d("ExcelEditor", "Ready event received from JavaScript")
+                            viewModel.onWebViewReady(this@apply)
                         }
 
                         @android.webkit.JavascriptInterface
-                        fun setMyIsDirty(flag: String) {
-                            android.util.Log.d("ExcelEditor", "📱 setMyIsDirty event received from JavaScript")
-                            viewModel.setMyIsDirty(flag.toBoolean())
+                        fun setIsDocumentModified(flagAsString: String) {
+                            val flag = flagAsString.toBoolean()
+                            android.util.Log.d("ExcelEditor", "setIsDocumentModified($flag) event received from JavaScript")
+                            viewModel.setIsDocumentModified(flag)
                         }
                     }, "AndroidInterface")
 
@@ -182,35 +184,17 @@ fun ExcelScreen(
         )
     }
 
-    val myIsDirty: Boolean = viewModel.myIsDirty.collectAsState().value
-    if (showExitDialog) {
-        if (!myIsDirty) {
-            showExitDialog = false
-            viewModel.clearSelectedFile()
-            onBack()
-        } else {
-            AlertDialog(
-                onDismissRequest = { showExitDialog = false },
-                title = { Text(context.resources.getString(R.string.excelscreen_unsavedChangesTitle)) },
-                text = { Text(context.resources.getString(R.string.excelscreen_unsavedChangesContent)) },
-                confirmButton = {
-                    TextButton(
-                        onClick = {
-                            showExitDialog = false
-                            viewModel.clearSelectedFile()
-                            onBack()
-                        }
-                    ) {
-                        Text(context.resources.getString(R.string.excelscreen_confirm))
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showExitDialog = false }) {
-                        Text(context.resources.getString(R.string.excelscreen_cancel))
-                    }
-                }
-            )
-        }
+    if (showExitConfirmationDialog.value) {
+        UnsavedChangesAlertDialog(
+            onConfirmExit = {
+                showExitConfirmationDialog.value = false
+                viewModel.clearSelectedFile()
+                onBack()
+            },
+            onDismiss = {
+                showExitConfirmationDialog.value = false
+            }
+        )
     }
 
 
@@ -221,4 +205,31 @@ fun ExcelScreen(
             }
         }
     }
+}
+
+@Composable
+fun UnsavedChangesAlertDialog(
+    onConfirmExit: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    val context: Context = LocalContext.current
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(context.resources.getString(R.string.excelscreen_unsavedChangesTitle)) },
+        text = { Text(context.resources.getString(R.string.excelscreen_unsavedChangesContent)) },
+        confirmButton = {
+            TextButton(
+                onClick = onConfirmExit
+            ) {
+                Text(context.resources.getString(R.string.excelscreen_confirm))
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = onDismiss
+            ) {
+                Text(context.resources.getString(R.string.excelscreen_cancel))
+            }
+        }
+    )
 }

@@ -1,4 +1,4 @@
-package com.sstek.jaoa
+package com.sstek.jaoa.core
 
 import android.net.Uri
 import android.os.Build
@@ -8,13 +8,9 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
-import com.sstek.jaoa.core.MainScreen
 import android.util.Log
 import androidx.annotation.RequiresApi
-import com.sstek.jaoa.core.FileType
 import com.sstek.jaoa.excel.ExcelScreen
-import com.sstek.jaoa.core.decodeUri
-import com.sstek.jaoa.core.encodeUri
 import com.sstek.jaoa.powerpoint.PowerpointEditorScreen
 import com.sstek.jaoa.word.SuperDocEditorScreen
 
