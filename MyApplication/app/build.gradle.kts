@@ -1,9 +1,11 @@
 plugins {
+    // Version Catalog (libs) kullanıldığı varsayılmıştır
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
 
     alias(libs.plugins.kotlin.kapt)
 
+    // Hilt doğrudan versiyonla tanımlanmıştır
     id("com.google.dagger.hilt.android") version "2.57" apply true
 
     alias(libs.plugins.compose.compiler)
@@ -32,19 +34,24 @@ android {
             )
         }
     }
+
+    // Java uyumluluğu Kotlin DSL'de `JavaVersion.VERSION_11` olarak ayarlanmıştır.
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
+
     kotlinOptions {
         jvmTarget = "11"
     }
+
     buildFeatures {
         compose = true
     }
 }
 
 dependencies {
+    // AndroidX & Temel Kütüphaneler
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
@@ -73,11 +80,30 @@ dependencies {
     // Jsoup
     implementation("org.jsoup:jsoup:1.21.1")
 
-    // POI
+    // --- POI & Opensagres Bağımlılıkları (Çakışma Çözümü) ---
+    // 1. poi-ooxml modülünden, çakışmaya neden olan lite versiyonunu ve potansiyel xmlbeans çekirdeğini hariç tutuyoruz.
+    implementation("org.apache.poi:poi-ooxml:5.4.1") {
+        // Kotlin DSL'de hariç tutma için `exclude` fonksiyonu kullanılır.
+        exclude(group = "org.apache.poi", module = "poi-ooxml-lite")
+        exclude(group = "org.apache.xmlbeans", module = "xml-schema-core")
+    }
+    // 2. Base POI
     implementation("org.apache.poi:poi:5.4.1")
-    implementation("org.apache.poi:poi-ooxml:5.4.1")
 
-    implementation("jp.wasabeef:richeditor-android:2.0.0")
+    // 3. POI'nin gerektirdiği ek XMLBeans desteği için (Stabil versiyon pini)
+    implementation("org.apache.xmlbeans:xmlbeans:5.1.1")
+
+    // 4. curvesapi (POI transitif bağımlılığı) - SLF4J çakışmasını önlemek için
+    implementation("com.github.virtuald:curvesapi:1.06") {
+        exclude(group = "org.slf4j", module = "slf4j-api")
+    }
+
+    // AWT
+    implementation("ro.andob.androidawt:androidawt:1.0.4")
+
+    // Opensagres
+    implementation("fr.opensagres.xdocreport:fr.opensagres.xdocreport.document:2.1.0")
+    implementation("fr.opensagres.xdocreport:fr.opensagres.poi.xwpf.converter.pdf:2.1.0")
 
     // Icons
     implementation("androidx.compose.material:material-icons-core:1.7.8")
@@ -92,8 +118,8 @@ dependencies {
     //implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.jar"))))
 }
 
-
-
+// Kapt yapılandırması Kotlin DSL sözdizimine uygun hale getirilmiştir.
+// Bu genellikle kapt eklentisi tarafından sağlanan bir uzantı bloğudur.
 kapt {
     correctErrorTypes = true
 }

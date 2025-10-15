@@ -123,6 +123,8 @@
     <string name="editorscreen_tooltipTextFormatTitle">Title</string>
     <string name="editorscreen_imageLoadError">Image could not inserted.</string>
     <string name="printingNotReadyMessage">Printing is not ready.</string>
+    <string name="wordViewModel_printStartedMessage">Preparing for printing.</string>
+    <string name="printingError">Printing preparing error.</string>
 
 
 </resources>

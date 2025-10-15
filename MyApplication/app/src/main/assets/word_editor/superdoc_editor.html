@@ -3,30 +3,28 @@
 <head>
 <meta charset="UTF-8">
 <title>SuperDoc Editor</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <link rel="stylesheet" href="superdoc.css">
+
 <style>
 
-
-@page { size: A4; margin: 2cm; }
-  /* Yazdırma için fazlalıkları gizle */
-  .pagination-separator,
-  .pagination-spacer {
-    display: none !important;
-  }
+.superdoc__layers {
+	padding-top: 48px;
+	padding-bottom: 48px;
+	margin: auto !important;
+}
 
 
 </style>
 </head>
 <body>
- <div class="controls" id="controls"></div>
-  <div id="editor"></div>
+	
+<div id="controls"></div>
+<div id="editor"></div>
   
   
  
  
- 
-  <script src="superdoc.umd.js"></script>
+<script src="superdoc.umd.js"></script>
 <script>
 const SuperDoc = SuperDocLibrary.SuperDoc;
 window.superdoc = null;
@@ -93,10 +91,23 @@ window.saveDocumentToAndroid = async function() {
     const arrayBuffer = await blob.arrayBuffer();
     const u8Arr = new Uint8Array(arrayBuffer);
     const base64 = uint8ArrayToBase64(u8Arr);
-    AndroidInterface.receiveFile(base64);
+    AndroidInterface.saveFile(base64);
     console.log("Document saved and sent to Android successfully.");
   } catch (e) {
     console.error("saveDocumentToAndroid error:", e);
+  }
+};
+
+window.printDocumentToAndroid = async function() {
+  try {
+    const blob = await window.superdoc.export({ exportType: ['docx'], triggerDownload: false });
+    const arrayBuffer = await blob.arrayBuffer();
+    const u8Arr = new Uint8Array(arrayBuffer);
+    const base64 = uint8ArrayToBase64(u8Arr);
+    AndroidInterface.printFile(base64);
+    console.log("Document print and sent to Android successfully.");
+  } catch (e) {
+    console.error("printDocumentToAndroid error:", e);
   }
 };
 
@@ -149,5 +160,6 @@ window.goToPage = function(page) {
 
 initializeEditor();
 </script>
+
 </body>
 </html>

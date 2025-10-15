@@ -124,5 +124,7 @@
     <string name="editorscreen_tooltipTextFormatTitle">Başlık</string>
     <string name="editorscreen_imageLoadError">Resim yüklenemedi.</string>
     <string name="printingNotReadyMessage">Yazdırma özelliği hazır değil.</string>
+    <string name="wordViewModel_printStartedMessage">Yazdırma için hazırlanıyor.</string>
+    <string name="printingError">Yazdırma için hazırlanılamadı.</string>
 
 </resources>

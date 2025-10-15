@@ -11,4 +11,6 @@
     <files-path
         name="internal_files"
         path="." />
+
+    <cache-path name="pdf_files" path="/" />
 </paths>

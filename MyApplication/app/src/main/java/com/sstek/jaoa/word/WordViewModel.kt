@@ -1,5 +1,6 @@
 package com.sstek.jaoa.word
 
+import android.app.Activity
 import android.app.Application
 import android.net.Uri
 import android.util.Log
@@ -11,25 +12,22 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
-import org.apache.poi.xwpf.usermodel.XWPFDocument
-import java.io.File
 import com.sstek.jaoa.R
+import com.sstek.jaoa.core.getFileName
 
 class WordViewModel(application: Application) : AndroidViewModel(application) {
     private val _selectedFileUri = MutableStateFlow<Uri?>(null)
     val selectedFileUri: StateFlow<Uri?> = _selectedFileUri
 
-    private val _docxDocument = MutableStateFlow<XWPFDocument?>(null)
-    val docxDocument: StateFlow<XWPFDocument?> = _docxDocument
-
-    private val _htmlContent = MutableStateFlow<String?>(null)
-    val htmlContent: StateFlow<String?> = _htmlContent
-
     private val _toastMessage = MutableSharedFlow<String>()
     val toastMessage = _toastMessage.asSharedFlow()
 
+
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
+
+    private var activity: Activity? = null
+    fun setActivity(act: Activity) { activity = act }
 
     private val _isBold = MutableStateFlow(false)
     val isBold: StateFlow<Boolean> = _isBold
@@ -58,18 +56,11 @@ class WordViewModel(application: Application) : AndroidViewModel(application) {
         _selectedFileUri.value = uri
     }
 
-
-
     fun clearSelectedFile() {
         _selectedFileUri.value = null
-        _htmlContent.value = null
-        _docxDocument.value = null
         _isLoading.value = false
     }
 
-
-
-    // ---------------------- SuperDoc Base64 Kaydetme ----------------------
     fun save(base64: String) {
         val uri = _selectedFileUri.value
         if (uri != null) {
@@ -97,5 +88,17 @@ class WordViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-
+    fun print(base64: String, activity: Activity) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                _isLoading.value = true
+                _toastMessage.emit(context.getString(R.string.wordViewModel_printStartedMessage))
+                val fileName = getFileName(context, _selectedFileUri.value)
+                printBase64DocxToPdf(activity, base64, fileName)
+            } catch (e: Exception) {
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
 }

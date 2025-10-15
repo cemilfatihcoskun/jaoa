@@ -22,17 +22,22 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.sstek.jaoa.R
 import com.sstek.jaoa.core.JAOATheme
 import com.sstek.jaoa.core.getFileName
 import com.sstek.jaoa.core.shareDocument
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import java.io.File
 import java.io.IOException
-import java.io.InputStream
+import android.print.*
+import android.os.Bundle
+import android.os.CancellationSignal
+import android.os.ParcelFileDescriptor
+import androidx.core.content.FileProvider
+import java.io.FileInputStream
+import java.io.FileOutputStream
+
 
 @Composable
 fun SuperDocEditorScreen(
@@ -49,18 +54,19 @@ fun SuperDocEditorScreen(
     var pageDropdownExpanded by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
 
+    LaunchedEffect(Unit) {
+        activity?.let { viewModel.setActivity(it) }
+    }
+
     fun uriToBase64(uri: Uri?): String {
         Log.d("SuperDocEditorScreen", "uri=$uri")
         if (uri == null || uri.toString().isEmpty()) return ""
 
-        // Kotlin'de 'use' bloğu, InputStream'in işlemi bittiğinde veya hata oluştuğunda
-        // otomatik olarak kapatılmasını (close) garanti eder. Bu, daha güvenli bir yaklaşımdır.
         try {
             val bytes = context.contentResolver.openInputStream(uri)?.use { inputStream ->
                 inputStream.readBytes()
-            } ?: return "" // InputStream null ise veya okuma başarısız olursa boş döndür.
+            } ?: return ""
 
-            // NO_WRAP: Base64 çıktısında yeni satır karakteri olmamasını sağlar (JS için zorunlu)
             return android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP)
         } catch (e: IOException) {
             Log.e("SuperDocEditorScreen", "I/O Error converting URI to Base64: ${e.message}")
@@ -205,7 +211,7 @@ fun SuperDocEditorScreen(
                     .fillMaxWidth()
                     .statusBarsPadding()
                     .padding(8.dp)
-                    .horizontalScroll(scrollState),
+                    .horizontalScroll(rememberScrollState()),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButtonWithTooltip(
@@ -293,7 +299,8 @@ fun SuperDocEditorScreen(
                 IconButtonWithTooltip(
                     Icons.Default.Print, R.string.editorscreen_tooltipPrint,
                     onClick = {
-                        webView?.let { printHtml(it, context, getFileName(context, viewModel.selectedFileUri.value!!)) }
+                        // JS komutunu çalıştır (bu, ViewModel'e PDF base64'ü gönderecek)
+                        webView?.let { it.evaluateJavascript("window.printDocumentToAndroid()", null) }
                             ?: Toast.makeText(context, context.getString(R.string.wordscreen_documentNotReadyMessage), Toast.LENGTH_SHORT).show()
                     },
                 )
@@ -343,16 +350,26 @@ fun SuperDocEditorScreen(
 
                         addJavascriptInterface(object {
                             @android.webkit.JavascriptInterface
-                            fun receiveFile(base64: String) {
+                            fun saveFile(base64: String) {
                                 val uri = viewModel.selectedFileUri.value
-                                Log.d("WordEditorScreen", "receiveFile() ${uri}")
+                                Log.d("WordEditorScreen", "AndroidInterface saveFile() ${uri}")
                                 if (uri != null) viewModel.saveAs(base64, uri)
+                            }
+
+                            @android.webkit.JavascriptInterface
+                            fun printFile(base64: String) {
+                                Log.d("WordEditorScreen", "AndroidInterface printFile()")
+                                // ViewModel, base64'ten PDF dosyasını oluşturacak ve pdfReadyEvent'i tetikleyecek.
+                                viewModel.print(base64, activity)
                             }
                         }, "AndroidInterface")
 
                         webViewClient = object : android.webkit.WebViewClient() {
                             override fun onPageFinished(view: WebView?, url: String?) {
                                 super.onPageFinished(view, url)
+
+                                view?.setInitialScale(25);
+
                                 Log.d("WordEditorScreen", "onPageFinished() ${filePath != null} ${filePath}");
                                 if (filePath.toString().equals("")) {
                                     val base64 = loadTemplateFromAssets(context)
