@@ -1,102 +1,193 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="tr">
 <head>
 <meta charset="UTF-8">
 <title>SuperDoc Editor</title>
 <link rel="stylesheet" href="superdoc.css">
+<meta name="viewport" content="width=device-width, initial-scale=1.0"> 
 
 <style>
-
 .superdoc__layers {
-	padding-top: 48px;
-	padding-bottom: 48px;
+	padding-top: 0px;
+	padding-bottom: 0px;
 	margin: auto !important;
+}
+
+.page {
+	border: 5px solid #aaa;
 }
 
 
 </style>
 </head>
 <body>
-	
-<div id="controls"></div>
+    
+<div id="controlsa" class="bg-white shadow-md"></div> 
 <div id="editor"></div>
-  
-  
- 
- 
+
+<h1>TARGET</h1>
+<div id="target"></div>
+
+<!--
+<h1>TARGET</h1>
+<div id="target"></div>
+-->
+    
 <script src="superdoc.umd.js"></script>
 <script>
 const SuperDoc = SuperDocLibrary.SuperDoc;
 window.superdoc = null;
 
-function initializeEditor(docFile = null) {
-  if (window.superdoc) {
-    window.superdoc.destroy();
-    document.querySelector('#editor').innerHTML = "";
-  }
-
-  window.superdoc = new SuperDoc({
-    selector: '#editor',
-    toolbar: '#controls',
-    document: docFile,
-    documentMode: 'editing',
-    pagination: true,
-    onReady: () => console.log('SuperDoc Ready'),
-    onEditorCreate: () => console.log('SuperDoc Editor Created')
-  });
-}
-
-// Base64 → Uint8Array
 function base64ToUint8Array(base64) {
-  const binary = atob(base64);
-  const len = binary.length;
-  const bytes = new Uint8Array(len);
-  for (let i = 0; i < len; i++) {
-    bytes[i] = binary.charCodeAt(i);
-  }
-  return bytes;
+    const binary = atob(base64);
+    const len = binary.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
+        bytes[i] = binary.charCodeAt(i);
+    }
+    return bytes;
 }
 
-// Uint8Array → Base64 (binary-safe)
 function uint8ArrayToBase64(u8Arr) {
-  let CHUNK_SIZE = 0x8000; // büyük dosyalar için parçala
-  let index = 0;
-  let length = u8Arr.length;
-  let result = '';
-  let slice;
-  while (index < length) {
-    slice = u8Arr.subarray(index, Math.min(index + CHUNK_SIZE, length));
-    result += String.fromCharCode.apply(null, slice);
-    index += CHUNK_SIZE;
-  }
-  return btoa(result);
+    let CHUNK_SIZE = 0x8000;
+    let index = 0;
+    let length = u8Arr.length;
+    let result = '';
+    let slice;
+    while (index < length) {
+        slice = u8Arr.subarray(index, Math.min(index + CHUNK_SIZE, length));
+        result += String.fromCharCode.apply(null, slice);
+        index += CHUNK_SIZE;
+    }
+    return btoa(result);
 }
 
-// Load docx
+function initializeEditor(docFile = null) {
+    if (window.superdoc) {
+        window.superdoc.destroy();
+        document.querySelector('#editor').innerHTML = "";
+    }
+
+    window.superdoc = new SuperDoc({
+        selector: '#editor',
+        toolbar: '#controls',
+        document: docFile,
+        documentMode: 'editing',
+        pagination: true,
+        onReady: () => console.log('SuperDoc Hazır'),
+        onEditorCreate: () => console.log('SuperDoc Editörü Oluşturuldu')
+    });
+}
+
+
+function autoLoadDocument() {
+    initializeEditor();
+
+    // Kullanıcının dosya seçmesi için input oluştur
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = '.docx'; 
+    fileInput.style.display = 'none';
+    document.body.appendChild(fileInput);
+
+    fileInput.addEventListener('change', function(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const base64String = e.target.result.split(',')[1];
+            window.loadDocxFromBase64(base64String, file.name);
+        };
+        reader.readAsDataURL(file);
+    });
+
+    // Kullanıcıdan dosya seçmesini iste
+    setTimeout(() => {
+        fileInput.click();
+    }, 1000); 
+}
+
 window.loadDocxFromBase64 = function(base64, fileName = "document.docx") {
-  try {
-    const bytes = base64ToUint8Array(base64);
-    const file = new File([bytes], fileName, { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
-    console.log("SuperDoc: File created, loading into editor:", fileName);
-    initializeEditor(file);
-  } catch (e) {
-    console.error("loadDocxFromBase64 error:", e);
-  }
+    try {
+        const bytes = base64ToUint8Array(base64);
+        const file = new File([bytes], fileName, { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
+        console.log("SuperDoc: Dosya oluşturuldu, editöre yükleniyor:", fileName);
+        initializeEditor(file); 
+    } catch (e) {
+        console.error("loadDocxFromBase64 hata:", e);
+    }
 };
 
-// Save docx
-window.saveDocumentToAndroid = async function() {
-  try {
-    const blob = await window.superdoc.export({ exportType: ['docx'], triggerDownload: false });
-    const arrayBuffer = await blob.arrayBuffer();
-    const u8Arr = new Uint8Array(arrayBuffer);
-    const base64 = uint8ArrayToBase64(u8Arr);
-    AndroidInterface.saveFile(base64);
-    console.log("Document saved and sent to Android successfully.");
-  } catch (e) {
-    console.error("saveDocumentToAndroid error:", e);
-  }
-};
+window.goToPage = function(page) {
+    if (!window.superdoc || !window.superdoc.activeEditor) return;
+
+    const editor = window.superdoc.activeEditor;
+    const wrappers = editor.view.dom.querySelectorAll(".pagination-break-wrapper");
+    if (!wrappers.length) return;
+
+    if (page < 1) page = 1;
+    if (page > wrappers.length) page = wrappers.length;
+
+    const wrapper = wrappers[page - 1];
+    const inner = wrapper.querySelector(".pagination-inner");
+    const header = inner ? inner.querySelector(".pagination-section-header") : null;
+
+    const targetElement = header || wrapper;
+
+    targetElement.scrollIntoView({
+        behavior: 'instant',
+        block: 'start'
+    });
+
+    console.log("Scrolled to page", page, "using scrollIntoView at element:", targetElement);
+}
+
+
+
+
+function t() {
+	const source = document.querySelector('.super-editor__element .ProseMirror');
+	const output = document.querySelector('#target');
+	
+	output.innerHTML = ''; 
+
+	if (!source || source.children.length === 0) { 
+		console.warn("Kaynak konteyner boş veya bulunamadı.");
+		return;
+	}
+
+
+	let currentPageDiv = document.createElement('div');
+	currentPageDiv.className = 'page';
+	
+
+	while (source.firstChild) {
+		
+		const currentElement = source.firstChild;
+		console.log(currentElement);
+		
+		if (currentElement.hasChildNodes() 
+			&& currentElement.children[0].className === "pagination-page-spacer ProseMirror-widget"
+		) {
+			currentPageDiv.appendChild(currentElement.children[0]);
+			let pi = currentElement.children[0].children[0];
+			console.log(pi);
+			currentPageDiv.appendChild(pi.children[0]);
+			output.appendChild(currentPageDiv);
+			
+			pi.children[0].remove();
+			
+			
+			currentPageDiv = document.createElement('div');
+			currentPageDiv.className = 'page';
+			currentPageDiv.appendChild(pi.children[0]);
+		}
+		
+		currentPageDiv.appendChild(currentElement);
+	}
+	output.appendChild(currentPageDiv);
+}
 
 window.printDocumentToAndroid = async function() {
   try {
@@ -111,54 +202,74 @@ window.printDocumentToAndroid = async function() {
   }
 };
 
-window.insertImageFile = function(blob, fileName) {
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        const dataUrl = e.target.result;
-        if (window.superdoc && window.superdoc.activeEditor) {
-            window.superdoc.activeEditor.commands.insertImage({
-                src: dataUrl,
-                name: fileName || "image.png"
-            });
-            console.log("Image inserted into document as inline image");
-        } else {
-            console.error("SuperDoc editor not ready");
-        }
-    };
-    reader.readAsDataURL(blob);
+function gt(element) {
+    if (!element || !(element instanceof HTMLElement)) {
+        console.error("Geçerli bir HTMLElement sağlanmadı.");
+        return null;
+    }
+    const standardOffsetTop = element.offsetTop;
+    const rect = element.getBoundingClientRect();
+    const absoluteTop = rect.top + window.scrollY;
+    return absoluteTop; 
 }
 
-window.goToPage = function(page) {
-    if (!window.superdoc || !window.superdoc.activeEditor) return;
+function ge(startPx = 0, endPx = 1000) {
+    const container = document.querySelector(".super-editor .ProseMirror");
+    if (!container) {
+        console.error("ProseMirror konteyneri bulunamadı.");
+        return [];
+    }
 
-    const editor = window.superdoc.activeEditor;
-    const wrappers = editor.view.dom.querySelectorAll(".pagination-break-wrapper");
-    if (!wrappers.length) return;
+    const allElements = container.querySelectorAll('*');
+    const result = [];
 
-    // Sayfa sınır kontrolü
-    if (page < 1) page = 1;
-    if (page > wrappers.length) page = wrappers.length;
+    console.log(`--- Arama: ${startPx}px → ${endPx}px ---`);
 
-    const wrapper = wrappers[page - 1];
-    const inner = wrapper.querySelector(".pagination-inner");
-    const header = inner ? inner.querySelector(".pagination-section-header") : null;
+    Array.from(allElements).forEach(element => {
+        const rect = element.getBoundingClientRect();
+        const absTop = gt(element);
+        const elemHeight = rect.height;
+        const elemBottom = absTop + elemHeight;
 
-    // **Yeni Scroll Hedefi:** Header varsa onu, yoksa wrapper'ı kullan
-    const targetElement = header || wrapper;
+        if (absTop >= startPx && elemBottom <= endPx) {
+            result.push(element);
 
-    // Scroll işlemini scrollIntoView ile yap
-    targetElement.scrollIntoView({
-        behavior: 'instant', // Anında geçiş (smooth da kullanabilirsiniz)
-        block: 'start'       // Elementi viewport'un en üstüne getir
+            let name = element.tagName;
+            if (element.id) name += `#${element.id}`;
+            if (element.className) name += `.${element.className.split(' ')[0]}`;
+
+            console.log(`[Eklendi] ${name} | top=${absTop.toFixed(0)} | h=${elemHeight.toFixed(0)} | alt=${elemBottom.toFixed(0)}`);
+        }
     });
 
-    console.log("Scrolled to page", page, "using scrollIntoView at element:", targetElement);
-
-    // Not: Bu kısım artık gereksiz, doğru offset hesaplanmış olabilir:
-    // window.scroll(0, wrapper.offsetTop + (header ? header.offsetTop : 0));
+    console.log(`Toplam ${result.length} element bulundu (${startPx}-${endPx}px aralığında).`);
+    return result;
 }
 
+function f() {
+	pbw = document.querySelectorAll(".pagination-break-wrapper");
+	res = ge(gt(pbw[0].children[0].children[0]), gt(pbw[1].children[0].children[1]));
+	
+	console.log(res);
+	
+	page = document.createElement("div");
+	for (let i = 0; i < res.length; i++) {
+		page.appendChild(res[i]);
+	}
+	
+	target = document.querySelector("#target");
+	target.appendChild(page);
+}
+
+
+
+
+//window.addEventListener('load', autoLoadDocument);
 initializeEditor();
+
+// yemiyor
+pbw = document.querySelectorAll(".pagination-break-wrapper");
+
 </script>
 
 </body>

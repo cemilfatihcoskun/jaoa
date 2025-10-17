@@ -3,7 +3,10 @@ package com.sstek.jaoa.word
 import android.app.Activity
 import android.app.Application
 import android.net.Uri
+import android.util.Base64
 import android.util.Log
+import android.webkit.WebView
+import android.widget.Toast
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
@@ -14,6 +17,9 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import com.sstek.jaoa.R
 import com.sstek.jaoa.core.getFileName
+import kotlinx.coroutines.withContext
+import java.io.File
+import java.io.FileOutputStream
 
 class WordViewModel(application: Application) : AndroidViewModel(application) {
     private val _selectedFileUri = MutableStateFlow<Uri?>(null)
@@ -90,15 +96,32 @@ class WordViewModel(application: Application) : AndroidViewModel(application) {
 
     fun print(base64: String, activity: Activity) {
         viewModelScope.launch(Dispatchers.IO) {
+            var tempDocx: File? = null
             try {
                 _isLoading.value = true
                 _toastMessage.emit(context.getString(R.string.wordViewModel_printStartedMessage))
                 val fileName = getFileName(context, _selectedFileUri.value)
-                printBase64DocxToPdf(activity, base64, fileName)
+
+
+                val tempDocx = File(activity.cacheDir, "printTemp.docx")
+                FileOutputStream(tempDocx).use { fos ->
+                    fos.write(Base64.decode(base64, Base64.DEFAULT))
+                }
+
+
+                // 2️⃣ DOCX'i PDF'e çevir ve yazdır
+                printDocxFileToPdf(activity, tempDocx, fileName)
+                //printHtml(activity, webView, fileName)
             } catch (e: Exception) {
+                Log.e("WordViewModel", "Print error", e)
+                withContext(Dispatchers.Main) {
+                    val errorMessage = context.getString(R.string.printingError)
+                    Toast.makeText(activity, errorMessage, Toast.LENGTH_LONG).show()
+                }
             } finally {
                 _isLoading.value = false
             }
         }
     }
+
 }

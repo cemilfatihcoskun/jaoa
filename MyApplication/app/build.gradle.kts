@@ -104,6 +104,11 @@ dependencies {
     // Opensagres
     implementation("fr.opensagres.xdocreport:fr.opensagres.xdocreport.document:2.1.0")
     implementation("fr.opensagres.xdocreport:fr.opensagres.poi.xwpf.converter.pdf:2.1.0")
+    //implementation("fr.opensagres.xdocreport:fr.opensagres.xdocreport.itext5.extension:2.1.0")
+    //implementation("fr.opensagres.xdocreport:fr.opensagres.poi.xwpf.converter.pdf.itext5:2.1.0")
+    //implementation("com.itextpdf:itextpdf:5.5.13.3")
+
+
 
     // Icons
     implementation("androidx.compose.material:material-icons-core:1.7.8")

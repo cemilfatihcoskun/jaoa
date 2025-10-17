@@ -6,20 +6,27 @@ import android.os.*
 import android.print.*
 import android.util.Base64
 import android.util.Log
+import android.webkit.WebView
 import android.widget.Toast
+import com.lowagie.text.Document
 import com.lowagie.text.Font
+import com.lowagie.text.FontFactory
+import com.lowagie.text.PageSize
+import com.lowagie.text.Paragraph
 import com.lowagie.text.pdf.BaseFont
-import fr.opensagres.poi.xwpf.converter.pdf.PdfConverter
-import fr.opensagres.poi.xwpf.converter.pdf.PdfOptions
-import fr.opensagres.xdocreport.itext.extension.font.IFontProvider
+import com.lowagie.text.pdf.PdfWriter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.apache.poi.xwpf.usermodel.XWPFDocument
-import java.awt.Color
 import java.io.*
-import org.openxmlformats.schemas.wordprocessingml.x2006.main.CTBr
-import org.openxmlformats.schemas.wordprocessingml.x2006.main.STBrType
+import java.util.zip.ZipEntry
+import java.util.zip.ZipFile
+import java.util.zip.ZipOutputStream
 import com.sstek.jaoa.R
+import fr.opensagres.poi.xwpf.converter.pdf.PdfConverter
+import fr.opensagres.poi.xwpf.converter.pdf.PdfOptions
+import fr.opensagres.xdocreport.itext.extension.font.IFontProvider
+import java.awt.Color
 
 fun sanitizeDocxColors(document: XWPFDocument) {
     document.paragraphs.forEach { paragraph ->
@@ -36,88 +43,22 @@ fun sanitizeDocxColors(document: XWPFDocument) {
     }
 }
 
-
-fun ensurePageBreaks(document: XWPFDocument) {
-    try {
-        val paragraphs = document.paragraphs
-        val indicesWithBreaks = mutableListOf<Int>()
-
-        // Scan for page breaks
-        for (pi in paragraphs.indices) {
-            val p = paragraphs[pi]
-            for (run in p.runs) {
-                val brList: List<CTBr> = run.ctr.brList
-                if (brList.isEmpty()) continue
-                for (br in brList) {
-                    val isPageType = try { br.type != null && br.type == STBrType.PAGE } catch (_: Exception) { false }
-                    val xmlHasLastRendered = try { br.xmlText()?.contains("lastRenderedPageBreak", true) == true } catch (_: Exception) { false }
-
-                    if (isPageType || xmlHasLastRendered) {
-                        indicesWithBreaks.add(pi)
-                        break
-                    }
-                }
-                if (indicesWithBreaks.lastOrNull() == pi) break
-            }
-        }
-
-        if (indicesWithBreaks.isEmpty()) {
-            Log.d("ensurePageBreaks", "No inline page-breaks found.")
-            return
-        }
-        Log.d("ensurePageBreaks", "Paragraphs with breaks: $indicesWithBreaks")
-
-        // Process page breaks in reverse order
-        indicesWithBreaks.sortedDescending().forEach { pi ->
-            val p = paragraphs[pi]
-
-            // Remove inline <w:br> elements
-            for (rIndex in p.runs.indices.reversed()) {
-                val run = p.runs[rIndex]
-                val brList = run.ctr.brList
-                if (brList.isEmpty()) continue
-
-                for (bIndex in brList.indices.reversed()) {
-                    val br = brList[bIndex]
-                    val isPageType = try { br.type != null && br.type == STBrType.PAGE } catch (_: Exception) { false }
-                    val xmlHasLastRendered = try { br.xmlText()?.contains("lastRenderedPageBreak", true) == true } catch (_: Exception) { false }
-
-                    if (isPageType || xmlHasLastRendered) {
-                        try {
-                            run.ctr.removeBr(bIndex)
-                            Log.d("ensurePageBreaks", "Removed inline <w:br> at paragraph $pi run $rIndex brIndex $bIndex")
-                        } catch (e: Exception) {
-                            Log.e("ensurePageBreaks", "run.ctr.removeBr failed: ${e.message}", e)
-                        }
+fun removeCustomXml(docxFile: File): File {
+    val sanitizedFile = File(docxFile.parentFile, "sanitized.docx")
+    ZipFile(docxFile).use { zip ->
+        ZipOutputStream(FileOutputStream(sanitizedFile)).use { out ->
+            zip.entries().asSequence().forEach { entry ->
+                if (!entry.name.equals("docProps/custom.xml", ignoreCase = true)) {
+                    zip.getInputStream(entry).use { input ->
+                        out.putNextEntry(ZipEntry(entry.name))
+                        input.copyTo(out)
+                        out.closeEntry()
                     }
                 }
             }
-
-            // Add pageBreakBefore to the next paragraph
-            val nextIndex = pi + 1
-            if (nextIndex < document.paragraphs.size) {
-                val nextPara = document.paragraphs[nextIndex]
-                val pPr = nextPara.ctp.pPr ?: nextPara.ctp.addNewPPr()
-                try {
-                    pPr.addNewPageBreakBefore()
-                    // Add spacing before to prevent content from shifting up
-                    pPr.spacing?.setBefore(240) // 240 twips = 12pt spacing before
-                    Log.d("ensurePageBreaks", "Added pageBreakBefore and spacing on paragraph index $nextIndex")
-                } catch (e: Exception) {
-                    Log.w("ensurePageBreaks", "addNewPageBreakBefore warning: ${e.message}")
-                }
-            } else {
-                // Append a new paragraph with page break
-                val newParagraph = document.createParagraph()
-                newParagraph.isPageBreak = true
-                newParagraph.spacingBefore = 240 // Add spacing for safety
-                newParagraph.createRun().setText("")
-                Log.d("ensurePageBreaks", "Appended page-break paragraph at end")
-            }
         }
-    } catch (e: Exception) {
-        Log.e("ensurePageBreaks", "Error: ${e.message}", e)
     }
+    return sanitizedFile
 }
 
 fun mapDocxFontToTtf(
@@ -125,7 +66,7 @@ fun mapDocxFontToTtf(
     fontFamily: String,
     style: Int,
     size: Float,
-    color: Color?
+    color: java.awt.Color?
 ): Font {
     val normalizedFontName = fontFamily.replace(" ", "").lowercase()
     val fontsDir = context.assets.list("word_editor/fonts") ?: emptyArray()
@@ -189,46 +130,128 @@ fun createFontProvider(context: Context) = object : IFontProvider {
     }
 }
 
-suspend fun printBase64DocxToPdf(
+suspend fun printHtml(activity: Activity, webView: WebView, fileName: String) {
+    withContext(Dispatchers.Main) {
+        try {
+            // 1. WebView Ayarları (Öncekiyle Aynı)
+            webView.settings.apply {
+                javaScriptEnabled = true
+                loadWithOverviewMode = true
+                useWideViewPort = true
+            }
+
+            // 2. PrintManager ve Adapter Hazırlığı
+            val printManager = activity.getSystemService(Activity.PRINT_SERVICE) as PrintManager
+            val printAdapter = webView.createPrintDocumentAdapter(fileName)
+
+            // ÖZEL BOYUT TANIMLAMA (Örnek: B5 boyutu - 176mm x 250mm)
+            // Genişlik ve Yükseklik mikrometre (microns) cinsinden verilir.
+            val customWidthMicrons = 176000
+            val customHeightMicrons = 250000
+            val customSizeName = "CUSTOM_B5_SIZE" // Özel boyutunuz için benzersiz bir isim
+
+            val customMediaSize = PrintAttributes.MediaSize(
+                customSizeName,         // Benzersiz kağıt adı (Örn: "custom_b5")
+                customSizeName,         // Kullanıcıya gösterilecek yerel ad (Örn: "Özel B5")
+                customWidthMicrons,     // Genişlik (mikrometre)
+                customHeightMicrons     // Yükseklik (mikrometre)
+            )
+
+            // 3. PrintAttributes'ı Özel Boyuta Ayarlama
+            val builder = PrintAttributes.Builder()
+                .setMediaSize(customMediaSize) // Özel olarak tanımlanan boyutu kullan
+
+                // Yüksek çözünürlük (600 DPI)
+                .setResolution(PrintAttributes.Resolution("res1", "resolution", 600, 600))
+
+                // Kenar boşluklarını kaldırma
+                .setMinMargins(PrintAttributes.Margins.NO_MARGINS)
+
+            val printJobName = fileName.replace(".pdf", "")
+
+            // 4. Yazdırma İşini Başlatma
+            val printJob = printManager.print(printJobName, printAdapter, builder.build())
+
+            // Not: PrintManager'ın PDF kaydetme mekanizması asenkron çalışır.
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+            // Hata yönetimi
+        }
+    }
+}
+
+
+
+// PDF oluşturma (com.lowagie itext 2 sürümü)
+suspend fun printDocxFileToPdf(
     activity: Activity,
-    base64: String,
-    fileName: String = "document_to_print"
+    docxFile: File,
+    fileName: String = "document_to_print",
+    scale: Float = 0.75f // PDF içeriğini ölçek
 ) {
     var pdfFile: File? = null
+    var scaledPdfFile: File? = null
     withContext(Dispatchers.IO) {
         try {
-            val docxBytes = Base64.decode(base64, Base64.DEFAULT)
-            val document = XWPFDocument(ByteArrayInputStream(docxBytes))
-            sanitizeDocxColors(document)
-            ensurePageBreaks(document)
-
-            File(activity.cacheDir, "debug_after.docx").outputStream().use { document.write(it) }
-
-
-            val pdfOptions = PdfOptions.create()
-                .fontEncoding(BaseFont.IDENTITY_H)
-                .fontProvider(createFontProvider(activity))
+            val sanitizedFile = removeCustomXml(docxFile)
+            val docx = XWPFDocument(FileInputStream(sanitizedFile))
+            sanitizeDocxColors(docx)
 
             pdfFile = File(activity.cacheDir, "temp.pdf")
             FileOutputStream(pdfFile!!).use { output ->
-                PdfConverter.getInstance().convert(document, output, pdfOptions)
+                val pdfOptions = PdfOptions.create()
+                    .fontEncoding(BaseFont.IDENTITY_H)
+                    .fontProvider(createFontProvider(activity))
+                PdfConverter.getInstance().convert(docx, output, pdfOptions)
             }
+
+            // PDF ölçekleme
+            //scaledPdfFile = File(activity.cacheDir, "temp_scaled.pdf")
+            //scalePdf(pdfFile!!, scaledPdfFile!!, scale)
 
             withContext(Dispatchers.Main) {
                 val printManager = activity.getSystemService(Context.PRINT_SERVICE) as PrintManager
-                val adapter = SimplePdfPrintAdapter(activity, pdfFile!!)
+                val adapter = SimplePdfPrintAdapter(activity, pdfFile)
                 printManager.print(fileName, adapter, null)
             }
+
         } catch (e: Exception) {
             Log.e("WordUtils", "PDF yazdırma hatası: ${e.message}", e)
-
-            val errorMessage = activity.applicationContext.getString(R.string.printingError)
             withContext(Dispatchers.Main) {
-                Toast.makeText(activity, errorMessage, Toast.LENGTH_LONG)
-                    .show()
+                Toast.makeText(activity, activity.getString(R.string.printingError), Toast.LENGTH_LONG).show()
             }
         }
     }
+}
+
+// PDF ölçekleme fonksiyonu
+fun scalePdf(input: File, output: File, scale: Float = 0.75f) {
+    val reader = com.lowagie.text.pdf.PdfReader(input.absolutePath)
+    val stamper = com.lowagie.text.pdf.PdfStamper(reader, FileOutputStream(output))
+
+    for (i in 1..reader.numberOfPages) {
+        val page = stamper.getOverContent(i)
+        val pageSize = reader.getPageSizeWithRotation(i)
+        val xOffset = (pageSize.width * (1 - scale)) / 2
+        val yOffset = (pageSize.height * (1 - scale)) / 2
+        page.concatCTM(scale, 0f, 0f, scale, xOffset, yOffset)
+    }
+
+    stamper.close()
+    reader.close()
+}
+
+
+// Base64 sürümü (aynı şekilde page break destekli)
+suspend fun printDocxBase64ToPdfLowagie(
+    activity: Activity,
+    docxBase64: String,
+    fileName: String = "document_to_print"
+) {
+    val tmpFile = File(activity.cacheDir, "tmp_docx.docx")
+    FileOutputStream(tmpFile).use { it.write(Base64.decode(docxBase64, Base64.DEFAULT)) }
+    printDocxFileToPdf(activity, tmpFile, fileName)
 }
 
 class SimplePdfPrintAdapter(private val activity: Activity, private val pdfFile: File) :
