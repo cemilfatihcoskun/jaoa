@@ -16,12 +16,11 @@
 * Arkaplan rengi seçilebiliyor.
 * Farklı dosya tiplerine navigasyon edilebiliyor.
 * Docx paylaşılabiliyor.
-* Docx yazdırılabiliyor.
+* Docx kısmen yazdırılabiliyor.
 
 ### Yapılamayanlar
-* Tablo okuma sıkıntılı metinler tablonun dışına taşıyor.
+* Docx düzgün formatta yazdıramıyor.
 * Büyük dosyalar açılıyor ama düzenlenirken çok kasıyor.
-* Sayfa boyutu hesaplama sıkıntılı.
 
 //////////////////////////
 

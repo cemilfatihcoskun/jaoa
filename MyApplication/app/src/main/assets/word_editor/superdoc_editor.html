@@ -46,6 +46,19 @@ function base64ToUint8Array(base64) {
     return bytes;
 }
 
+window.saveDocumentToAndroid = async function() {
+  try {
+    const blob = await window.superdoc.export({ exportType: ['docx'], triggerDownload: false });
+    const arrayBuffer = await blob.arrayBuffer();
+    const u8Arr = new Uint8Array(arrayBuffer);
+    const base64 = uint8ArrayToBase64(u8Arr);
+    AndroidInterface.saveFile(base64);
+    console.log("Document saved and sent to Android successfully.");
+  } catch (e) {
+    console.error("saveDocumentToAndroid error:", e);
+  }
+};
+
 function uint8ArrayToBase64(u8Arr) {
     let CHUNK_SIZE = 0x8000;
     let index = 0;
@@ -75,6 +88,24 @@ function initializeEditor(docFile = null) {
         onReady: () => console.log('SuperDoc Hazır'),
         onEditorCreate: () => console.log('SuperDoc Editörü Oluşturuldu')
     });
+}
+
+window.insertImageFile = function(blob, fileName) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const dataUrl = e.target.result;
+        if (window.superdoc && window.superdoc.activeEditor) {
+            window.superdoc.activeEditor.commands.insertImage({
+                src: dataUrl,
+                name: fileName || "image.png"
+            });
+
+            console.log("Image inserted into document as inline image");
+        } else {
+            console.error("SuperDoc editor not ready");
+        }
+    };
+    reader.readAsDataURL(blob);
 }
 
 
